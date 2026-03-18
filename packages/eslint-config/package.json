@@ -1,0 +1,10 @@
+{
+  "name": "@studio/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["*.js"],
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

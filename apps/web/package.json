@@ -1,0 +1,10 @@
+{
+  "name": "@studio/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Web app — Fase 3 (not yet implemented)'",
+    "build": "echo 'Web app — Fase 3 (not yet implemented)'",
+    "typecheck": "echo 'Web app — Fase 3 (not yet implemented)'"
+  }
+}
