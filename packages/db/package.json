@@ -12,16 +12,19 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/seed/index.ts",
     "db:studio": "drizzle-kit studio",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.0",
     "postgres": "^3.4.0"
   },
   "devDependencies": {
+    "@studio/eslint-config": "workspace:*",
     "@studio/ts-config": "workspace:*",
     "@types/node": "^22.0.0",
     "drizzle-kit": "^0.30.0",
+    "eslint": "^9.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

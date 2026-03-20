@@ -6,7 +6,6 @@ import * as paymentService from "../payment/payment.service.js";
 import * as clientService from "../client/client.service.js";
 import * as sophiaContext from "./sophia.context.js";
 import * as notificationService from "../notification/notification.service.js";
-import { formatBRL } from "@studio/shared/utils";
 import { logger } from "../../lib/logger.js";
 
 /**

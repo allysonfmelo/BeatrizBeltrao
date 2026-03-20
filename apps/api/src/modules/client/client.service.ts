@@ -1,6 +1,6 @@
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, count, max } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
-import { clients } from "@studio/db";
+import { clients, bookings } from "@studio/db";
 import { logger } from "../../lib/logger.js";
 import type { CreateClientDTO } from "@studio/shared/validators";
 
@@ -62,26 +62,59 @@ export async function update(id: string, data: Partial<CreateClientDTO>) {
 
 /**
  * Lists clients with optional search and pagination.
+ * Includes total_bookings and last_booking_date stats.
  */
 export async function list(params: { search?: string; page?: number; limit?: number }) {
   const page = params.page ?? 1;
   const limit = params.limit ?? 20;
   const offset = (page - 1) * limit;
 
-  let query = db.select().from(clients);
-
+  const conditions = [];
   if (params.search) {
     const term = `%${params.search}%`;
-    query = query.where(
+    conditions.push(
       or(
         ilike(clients.fullName, term),
         ilike(clients.phone, term),
         ilike(clients.email, term)
       )
-    ) as typeof query;
+    );
   }
 
-  const data = await query.limit(limit).offset(offset);
+  const where = conditions.length > 0 ? conditions[0] : undefined;
+
+  const rows = await db
+    .select({
+      id: clients.id,
+      fullName: clients.fullName,
+      phone: clients.phone,
+      cpf: clients.cpf,
+      email: clients.email,
+      notes: clients.notes,
+      createdAt: clients.createdAt,
+      updatedAt: clients.updatedAt,
+      totalBookings: count(bookings.id),
+      lastBookingDate: max(bookings.scheduledDate),
+    })
+    .from(clients)
+    .leftJoin(bookings, eq(clients.id, bookings.clientId))
+    .where(where)
+    .groupBy(clients.id)
+    .limit(limit)
+    .offset(offset);
+
+  const data = rows.map((row) => ({
+    id: row.id,
+    fullName: row.fullName,
+    phone: row.phone,
+    cpf: row.cpf,
+    email: row.email,
+    notes: row.notes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    totalBookings: Number(row.totalBookings),
+    lastBookingDate: row.lastBookingDate,
+  }));
 
   return { data, meta: { page, limit, total: data.length } };
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
-import { payments, clients } from "@studio/db";
+import { payments } from "@studio/db";
 import * as asaas from "../../lib/asaas.js";
 import * as bookingService from "../booking/booking.service.js";
 import { logger } from "../../lib/logger.js";

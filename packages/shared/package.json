@@ -11,11 +11,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "@studio/eslint-config": "workspace:*",
     "@studio/ts-config": "workspace:*",
-    "typescript": "^5.7.0"
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   },
   "dependencies": {
     "zod": "^3.24.0"

@@ -58,10 +58,20 @@ export async function createPreBooking(data: CreateBookingDTO) {
 }
 
 /**
+ * Finds a booking by ID (raw, no joins). Used internally.
+ */
+async function findByIdRaw(id: string) {
+  const result = await db.query.bookings.findFirst({
+    where: eq(bookings.id, id),
+  });
+  return result ?? null;
+}
+
+/**
  * Confirms a booking: updates status, creates Google Calendar event.
  */
 export async function confirmBooking(bookingId: string, paymentMethod?: string) {
-  const booking = await findById(bookingId);
+  const booking = await findByIdRaw(bookingId);
   if (!booking) throw new Error("Booking não encontrado");
   if (booking.status !== "pendente") throw new Error(`Booking não está pendente (status: ${booking.status})`);
 
@@ -133,7 +143,7 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
  * Cancels a booking and removes the calendar event if present.
  */
 export async function cancelBooking(bookingId: string, reason?: string) {
-  const booking = await findById(bookingId);
+  const booking = await findByIdRaw(bookingId);
   if (!booking) throw new Error("Booking não encontrado");
 
   if (booking.googleCalendarEventId) {
@@ -221,6 +231,7 @@ export async function expireOverdueBookings(): Promise<number> {
 
 /**
  * Lists bookings with optional filters and pagination.
+ * Returns enriched data with client and service info.
  */
 export async function listBookings(filters: {
   dateFrom?: string;
@@ -247,25 +258,128 @@ export async function listBookings(filters: {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const data = await db
-    .select()
+  const rows = await db
+    .select({
+      id: bookings.id,
+      clientId: bookings.clientId,
+      serviceId: bookings.serviceId,
+      scheduledDate: bookings.scheduledDate,
+      scheduledTime: bookings.scheduledTime,
+      endTime: bookings.endTime,
+      status: bookings.status,
+      totalPrice: bookings.totalPrice,
+      depositAmount: bookings.depositAmount,
+      googleCalendarEventId: bookings.googleCalendarEventId,
+      paymentDeadline: bookings.paymentDeadline,
+      cancellationReason: bookings.cancellationReason,
+      createdAt: bookings.createdAt,
+      updatedAt: bookings.updatedAt,
+      clientFullName: clients.fullName,
+      clientPhone: clients.phone,
+      clientEmail: clients.email,
+      serviceName: services.name,
+      serviceType: services.type,
+      servicePrice: services.price,
+    })
     .from(bookings)
+    .leftJoin(clients, eq(bookings.clientId, clients.id))
+    .leftJoin(services, eq(bookings.serviceId, services.id))
     .where(where)
     .orderBy(desc(bookings.scheduledDate))
     .limit(limit)
     .offset(offset);
 
+  const data = rows.map((row) => ({
+    id: row.id,
+    clientId: row.clientId,
+    serviceId: row.serviceId,
+    scheduledDate: row.scheduledDate,
+    scheduledTime: row.scheduledTime,
+    endTime: row.endTime,
+    status: row.status,
+    totalPrice: row.totalPrice,
+    depositAmount: row.depositAmount,
+    googleCalendarEventId: row.googleCalendarEventId,
+    paymentDeadline: row.paymentDeadline,
+    cancellationReason: row.cancellationReason,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    client: {
+      fullName: row.clientFullName,
+      phone: row.clientPhone,
+      email: row.clientEmail,
+    },
+    service: {
+      name: row.serviceName,
+      type: row.serviceType,
+      price: row.servicePrice,
+    },
+  }));
+
   return { data, meta: { page, limit, total: data.length } };
 }
 
 /**
- * Finds a booking by ID.
+ * Finds a booking by ID with enriched client and service data.
  */
 export async function findById(id: string) {
-  const result = await db.query.bookings.findFirst({
-    where: eq(bookings.id, id),
-  });
-  return result ?? null;
+  const rows = await db
+    .select({
+      id: bookings.id,
+      clientId: bookings.clientId,
+      serviceId: bookings.serviceId,
+      scheduledDate: bookings.scheduledDate,
+      scheduledTime: bookings.scheduledTime,
+      endTime: bookings.endTime,
+      status: bookings.status,
+      totalPrice: bookings.totalPrice,
+      depositAmount: bookings.depositAmount,
+      googleCalendarEventId: bookings.googleCalendarEventId,
+      paymentDeadline: bookings.paymentDeadline,
+      cancellationReason: bookings.cancellationReason,
+      createdAt: bookings.createdAt,
+      updatedAt: bookings.updatedAt,
+      clientFullName: clients.fullName,
+      clientPhone: clients.phone,
+      clientEmail: clients.email,
+      serviceName: services.name,
+      serviceType: services.type,
+      servicePrice: services.price,
+    })
+    .from(bookings)
+    .leftJoin(clients, eq(bookings.clientId, clients.id))
+    .leftJoin(services, eq(bookings.serviceId, services.id))
+    .where(eq(bookings.id, id));
+
+  if (rows.length === 0) return null;
+
+  const row = rows[0];
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    serviceId: row.serviceId,
+    scheduledDate: row.scheduledDate,
+    scheduledTime: row.scheduledTime,
+    endTime: row.endTime,
+    status: row.status,
+    totalPrice: row.totalPrice,
+    depositAmount: row.depositAmount,
+    googleCalendarEventId: row.googleCalendarEventId,
+    paymentDeadline: row.paymentDeadline,
+    cancellationReason: row.cancellationReason,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    client: {
+      fullName: row.clientFullName,
+      phone: row.clientPhone,
+      email: row.clientEmail,
+    },
+    service: {
+      name: row.serviceName,
+      type: row.serviceType,
+      price: row.servicePrice,
+    },
+  };
 }
 
 /**

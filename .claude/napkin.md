@@ -19,3 +19,12 @@
 - `c.req.param("id")` no Hono com TypeScript strict pode retornar `string | undefined` — usar `as string` quando rota garante o parâmetro.
 - ESLint não configurado (falta eslint.config.js) — lint falha em todos os pacotes. Pré-existente, não causado pela Wave 2.
 - LLM tool-calling loop: ao resubmeter mensagens com tool_calls, o assistant message precisa incluir `tool_calls` serializado e cada resultado como `role: "tool"` com `tool_call_id` matching.
+
+## Session 2026-03-20 — Wave 3 Implementation
+
+- vi.mock() paths in Vitest must be relative to the **test file** location, NOT the module under test. Common mistake: `vi.mock("../../config/env.js")` from `modules/x/__tests__/` should be `../../../config/env.js`.
+- Modules that instantiate clients at module level (OpenAI in llm.ts, Zod env validation in env.ts, postgres in supabase.ts) cause test failures unless mocked with factory functions BEFORE imports.
+- Drizzle `count()` and `max()` are exported from `drizzle-orm` directly (not a sub-path).
+- `findById` with joins uses `db.select().from().leftJoin().where()` — the chain ends at `.where()` (resolves there). `listBookings` adds `.orderBy().limit().offset()` — mock chains need different terminal methods.
+- Pre-existing lint issues fixed: unused `clients` import in payment.service.ts, unused `formatBRL` in sophia.tools.ts.
+- packages/ui has no eslint setup (placeholder, Fase 3) — removed its lint script to prevent turbo failure.
