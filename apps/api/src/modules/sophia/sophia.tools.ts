@@ -1,0 +1,397 @@
+import type { LlmTool, LlmToolCall } from "../../lib/llm.js";
+import * as serviceService from "../service/service.service.js";
+import * as calendarService from "../calendar/calendar.service.js";
+import * as bookingService from "../booking/booking.service.js";
+import * as paymentService from "../payment/payment.service.js";
+import * as clientService from "../client/client.service.js";
+import * as sophiaContext from "./sophia.context.js";
+import * as notificationService from "../notification/notification.service.js";
+import { formatBRL } from "@studio/shared/utils";
+import { logger } from "../../lib/logger.js";
+
+/**
+ * Tool definitions for Sophia's function calling.
+ */
+export const sophiaTools: LlmTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "list_services",
+      description: "Lista todos os serviços ativos do estúdio com preços e durações.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "check_availability",
+      description: "Verifica horários disponíveis para uma data e serviço específicos.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "Data no formato YYYY-MM-DD",
+          },
+          service_id: {
+            type: "string",
+            description: "ID do serviço para verificar a duração",
+          },
+        },
+        required: ["date", "service_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_client_data",
+      description: "Salva dados da cliente incrementalmente (nome, CPF, email). Chame sempre que coletar um dado novo.",
+      parameters: {
+        type: "object",
+        properties: {
+          full_name: { type: "string", description: "Nome completo da cliente" },
+          cpf: { type: "string", description: "CPF da cliente (apenas números)" },
+          email: { type: "string", description: "E-mail da cliente" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_booking",
+      description: "Cria um pré-agendamento e gera o link de pagamento do sinal (30%). Use apenas após coletar todos os dados e receber confirmação da cliente.",
+      parameters: {
+        type: "object",
+        properties: {
+          service_id: { type: "string", description: "ID do serviço" },
+          scheduled_date: { type: "string", description: "Data no formato YYYY-MM-DD" },
+          scheduled_time: { type: "string", description: "Horário no formato HH:mm" },
+        },
+        required: ["service_id", "scheduled_date", "scheduled_time"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_booking",
+      description: "Cancela um agendamento existente da cliente.",
+      parameters: {
+        type: "object",
+        properties: {
+          reason: { type: "string", description: "Motivo do cancelamento" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "handoff_to_human",
+      description: "Transfere a conversa para a Beatriz (maquiadora). Use para: noivas, serviços externos, reclamações, ou quando a cliente pedir.",
+      parameters: {
+        type: "object",
+        properties: {
+          reason: { type: "string", description: "Motivo da transferência" },
+        },
+        required: ["reason"],
+      },
+    },
+  },
+];
+
+/** Context needed to execute tools */
+interface ToolExecutionContext {
+  conversationId: string;
+  phone: string;
+  clientId: string | null;
+  collectedData: Record<string, unknown>;
+}
+
+/**
+ * Executes a tool call and returns the result as a string.
+ */
+export async function executeTool(
+  toolCall: LlmToolCall,
+  ctx: ToolExecutionContext
+): Promise<string> {
+  const args = toolCall.arguments;
+
+  try {
+    switch (toolCall.name) {
+      case "list_services":
+        return await executeListServices();
+
+      case "check_availability":
+        return await executeCheckAvailability(
+          args.date as string,
+          args.service_id as string
+        );
+
+      case "save_client_data":
+        return await executeSaveClientData(ctx, {
+          fullName: args.full_name as string | undefined,
+          cpf: args.cpf as string | undefined,
+          email: args.email as string | undefined,
+        });
+
+      case "create_booking":
+        return await executeCreateBooking(ctx, {
+          serviceId: args.service_id as string,
+          scheduledDate: args.scheduled_date as string,
+          scheduledTime: args.scheduled_time as string,
+        });
+
+      case "cancel_booking":
+        return await executeCancelBooking(ctx, args.reason as string | undefined);
+
+      case "handoff_to_human":
+        return await executeHandoff(ctx, args.reason as string);
+
+      default:
+        return JSON.stringify({ error: `Ferramenta desconhecida: ${toolCall.name}` });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    logger.error("Tool execution failed", { tool: toolCall.name, error: message });
+    return JSON.stringify({ error: message });
+  }
+}
+
+async function executeListServices(): Promise<string> {
+  const services = await serviceService.listActive();
+  const formatted = services.map((s) => ({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    category: s.category,
+    price: `R$ ${parseFloat(s.price).toFixed(2)}`,
+    deposit: `R$ ${(parseFloat(s.price) * 0.3).toFixed(2)}`,
+    duration: `${s.durationMinutes} min`,
+  }));
+  return JSON.stringify({ services: formatted });
+}
+
+async function executeCheckAvailability(
+  date: string,
+  serviceId: string
+): Promise<string> {
+  const service = await serviceService.findById(serviceId);
+  if (!service) {
+    return JSON.stringify({ error: "Serviço não encontrado" });
+  }
+
+  // Check if it's a Sunday (day 0)
+  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+  if (dayOfWeek === 0) {
+    return JSON.stringify({
+      available: false,
+      message: "Não atendemos aos domingos",
+      slots: [],
+    });
+  }
+
+  const slots = await calendarService.getAvailableSlots(date, service.durationMinutes);
+  return JSON.stringify({
+    available: slots.length > 0,
+    date,
+    service: service.name,
+    duration: service.durationMinutes,
+    slots: slots.map((s) => `${s.start} - ${s.end}`),
+  });
+}
+
+async function executeSaveClientData(
+  ctx: ToolExecutionContext,
+  data: { fullName?: string; cpf?: string; email?: string }
+): Promise<string> {
+  const updates: Record<string, unknown> = {};
+
+  if (data.fullName) updates.clientName = data.fullName;
+  if (data.cpf) updates.clientCpf = data.cpf.replace(/\D/g, "");
+  if (data.email) updates.clientEmail = data.email;
+
+  await sophiaContext.updateCollectedData(ctx.conversationId, updates);
+
+  // Merge with existing collected data
+  const merged = { ...ctx.collectedData, ...updates };
+  ctx.collectedData = merged;
+
+  // If we have enough data to find or create a client, link them
+  if (merged.clientName && merged.clientCpf && merged.clientEmail) {
+    try {
+      const phone = ctx.phone;
+      let client = await clientService.findByPhone(phone);
+
+      if (!client) {
+        client = await clientService.create({
+          fullName: merged.clientName as string,
+          phone,
+          cpf: merged.clientCpf as string,
+          email: merged.clientEmail as string,
+        });
+      }
+
+      await sophiaContext.linkClient(ctx.conversationId, client.id);
+      ctx.clientId = client.id;
+
+      return JSON.stringify({
+        success: true,
+        message: "Dados salvos e cliente vinculada à conversa",
+        clientId: client.id,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao criar cliente";
+      logger.error("Failed to create/link client", { error: message });
+      return JSON.stringify({
+        success: true,
+        message: "Dados salvos, mas houve erro ao vincular cliente: " + message,
+      });
+    }
+  }
+
+  return JSON.stringify({
+    success: true,
+    message: "Dados salvos",
+    collected: Object.keys(merged).filter(
+      (k) => merged[k] !== undefined && merged[k] !== null
+    ),
+  });
+}
+
+async function executeCreateBooking(
+  ctx: ToolExecutionContext,
+  data: { serviceId: string; scheduledDate: string; scheduledTime: string }
+): Promise<string> {
+  if (!ctx.clientId) {
+    return JSON.stringify({
+      error: "Cliente não vinculada. Colete nome, CPF e email antes de criar o agendamento.",
+    });
+  }
+
+  // Check availability first
+  const service = await serviceService.findById(data.serviceId);
+  if (!service) {
+    return JSON.stringify({ error: "Serviço não encontrado" });
+  }
+
+  const available = await calendarService.isSlotAvailable(
+    data.scheduledDate,
+    data.scheduledTime,
+    service.durationMinutes
+  );
+
+  if (!available) {
+    return JSON.stringify({
+      error: "Horário não disponível. Verifique outros horários com check_availability.",
+    });
+  }
+
+  // Create pre-booking
+  const booking = await bookingService.createPreBooking({
+    clientId: ctx.clientId,
+    serviceId: data.serviceId,
+    scheduledDate: data.scheduledDate,
+    scheduledTime: data.scheduledTime,
+  });
+
+  // Create payment charge
+  const client = await clientService.findById(ctx.clientId);
+  if (!client) {
+    return JSON.stringify({ error: "Erro interno: cliente não encontrada" });
+  }
+
+  let invoiceUrl = "";
+  try {
+    invoiceUrl = await paymentService.createPaymentForBooking(
+      {
+        id: booking.id,
+        depositAmount: booking.depositAmount,
+        scheduledDate: booking.scheduledDate,
+        serviceName: service.name,
+      },
+      {
+        fullName: client.fullName,
+        cpf: client.cpf,
+        email: client.email,
+        phone: client.phone,
+      }
+    );
+  } catch (error) {
+    logger.error("Failed to create payment, booking still created", {
+      bookingId: booking.id,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  await sophiaContext.setIntent(ctx.conversationId, "agendamento");
+
+  const depositValue = parseFloat(booking.depositAmount);
+
+  return JSON.stringify({
+    success: true,
+    bookingId: booking.id,
+    service: service.name,
+    date: data.scheduledDate,
+    time: data.scheduledTime,
+    totalPrice: `R$ ${parseFloat(booking.totalPrice).toFixed(2)}`,
+    deposit: `R$ ${depositValue.toFixed(2)}`,
+    invoiceUrl,
+    deadline: "24 horas",
+  });
+}
+
+async function executeCancelBooking(
+  ctx: ToolExecutionContext,
+  reason?: string
+): Promise<string> {
+  if (!ctx.clientId) {
+    return JSON.stringify({ error: "Cliente não identificada" });
+  }
+
+  const pendingBooking = await bookingService.findPendingByClientId(ctx.clientId);
+  if (!pendingBooking) {
+    return JSON.stringify({ error: "Nenhum agendamento pendente encontrado" });
+  }
+
+  // Cancel ASAAS payment
+  await paymentService.cancelPaymentForBooking(pendingBooking.id);
+
+  // Cancel booking
+  await bookingService.cancelBooking(pendingBooking.id, reason);
+
+  await sophiaContext.setIntent(ctx.conversationId, "cancelamento");
+
+  return JSON.stringify({
+    success: true,
+    message: "Agendamento cancelado",
+    bookingId: pendingBooking.id,
+  });
+}
+
+async function executeHandoff(
+  ctx: ToolExecutionContext,
+  reason: string
+): Promise<string> {
+  await sophiaContext.setHandoff(ctx.conversationId, reason);
+
+  // Notify Beatriz
+  await notificationService.notifyMaquiadora(
+    "Transferência de Conversa",
+    `Telefone: ${ctx.phone}\nMotivo: ${reason}\n\nA cliente precisa falar com você diretamente.`
+  );
+
+  return JSON.stringify({
+    success: true,
+    message: "Conversa transferida para a Beatriz",
+    reason,
+  });
+}

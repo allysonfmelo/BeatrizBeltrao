@@ -1,9 +1,7 @@
 import { Hono } from "hono";
+import { listClients } from "./client.controller.js";
 
 export const clientRoutes = new Hono();
 
-/** GET /api/v1/clients -- List clients */
-clientRoutes.get("/", async (c) => {
-  // TODO: Implement list clients
-  return c.json({ data: [], meta: { total: 0, page: 1, limit: 20 } });
-});
+/** GET /api/v1/clients — List clients with search and pagination */
+clientRoutes.get("/", listClients);

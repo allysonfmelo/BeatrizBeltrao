@@ -26,6 +26,9 @@ importers:
       '@studio/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      drizzle-orm:
+        specifier: ^0.39.0
+        version: 0.39.3(postgres@3.4.8)
       hono:
         specifier: ^4.7.0
         version: 4.12.8

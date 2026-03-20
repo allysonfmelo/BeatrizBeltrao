@@ -1,16 +1,13 @@
 import { Hono } from "hono";
+import * as bookingController from "./booking.controller.js";
 
 export const bookingRoutes = new Hono();
 
-/** GET /api/v1/bookings -- List bookings */
-bookingRoutes.get("/", async (c) => {
-  // TODO: Implement list bookings
-  return c.json({ data: [], meta: { total: 0, page: 1, limit: 20 } });
-});
+/** GET /api/v1/bookings — List bookings with filters */
+bookingRoutes.get("/", bookingController.listBookings);
 
-/** GET /api/v1/bookings/:id -- Get booking details */
-bookingRoutes.get("/:id", async (c) => {
-  const id = c.req.param("id");
-  // TODO: Implement get booking by ID
-  return c.json({ data: null, error: "Not implemented" }, 501);
-});
+/** GET /api/v1/bookings/:id — Get booking details */
+bookingRoutes.get("/:id", bookingController.getBooking);
+
+/** POST /api/v1/bookings/:id/confirm-payment — Simulate payment (dev) */
+bookingRoutes.post("/:id/confirm-payment", bookingController.confirmPayment);

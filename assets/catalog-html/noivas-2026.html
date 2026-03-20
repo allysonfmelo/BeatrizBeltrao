@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Noivas 2026 | Studio Beatriz Beltrão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-body: #ffffff;
+        --bg-surface: #fafafa;
+        --bg-surface-2: #f4f4f5;
+        --text-primary: #09090b;
+        --text-secondary: #71717a;
+        --text-tertiary: #a1a1aa;
+        --border-light: #e4e4e7;
+        --accent: #7c3aed;
+        --accent-soft: #f3f0ff;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .font-mono { font-family: "JetBrains Mono", monospace; }
+
+      @keyframes float {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-float-slow { animation: float 20s ease-in-out infinite; }
+      .animate-float-medium { animation: float 15s ease-in-out infinite reverse; }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.8s var(--ease-out-expo) forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      .reveal-on-scroll {
+        opacity: 0;
+        transform: translateY(40px) scale(0.96);
+        filter: blur(4px);
+        transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s ease-out;
+        will-change: opacity, transform, filter;
+      }
+
+      .reveal-on-scroll.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+
+      .delay-100 { transition-delay: 0.1s; animation-delay: 0.1s; }
+      .delay-200 { transition-delay: 0.2s; animation-delay: 0.2s; }
+      .delay-300 { transition-delay: 0.3s; animation-delay: 0.3s; }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-base {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s var(--ease-out-expo);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .btn-primary {
+        background: #000;
+        color: #fff;
+        border: 1px solid #000;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--text-primary);
+        border: 1px solid var(--border-light);
+      }
+
+      .btn-outline:hover {
+        border-color: #000;
+        background: var(--bg-surface);
+      }
+
+      .btn-beam-wrapper {
+        position: relative;
+        display: inline-flex;
+        padding: 2px;
+        border-radius: 9999px;
+        overflow: hidden;
+        cursor: pointer;
+        transform: translateZ(0);
+        transition: transform 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-beam-wrapper:hover { transform: scale(1.02); }
+
+      .btn-beam-border {
+        position: absolute;
+        inset: -200%;
+        background: conic-gradient(from 0deg, transparent 0 320deg, var(--accent) 360deg);
+        animation: beam-spin 3s linear infinite;
+      }
+
+      @keyframes beam-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .btn-beam-inner {
+        position: relative;
+        background: #fff;
+        color: #111827;
+        border-radius: 9999px;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body class="bg-white text-gray-900 selection:bg-purple-200 selection:text-purple-900">
+    <nav class="sticky top-0 z-50 border-b border-transparent bg-white/80 backdrop-blur-xl">
+      <div class="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6">
+        <a href="#" class="flex items-center gap-1 text-xl font-semibold tracking-tight text-black">
+          Studio Beatriz Beltrão <span class="opacity-40">_</span>
+        </a>
+        <div class="hidden items-center gap-10 md:flex">
+          <a href="#pacotes" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Pacotes</a>
+          <a href="#reserva" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Reserva</a>
+          <a href="#contato" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Contato</a>
+        </div>
+        <a href="https://wa.me/55XXXXXXXXXXX?text=Ol%C3%A1%2C%20quero%20informa%C3%A7%C3%B5es%20sobre%20Noivas%202026" class="btn-outline btn-base">
+          <i data-lucide="message-circle" class="h-4 w-4"></i> WhatsApp
+        </a>
+      </div>
+    </nav>
+
+    <main class="mx-auto max-w-[1440px] px-4 pb-20 sm:px-6">
+      <section class="relative isolate mt-4 h-auto min-h-[640px] overflow-hidden rounded-[40px] ring-1 ring-black/5 shadow-[0_20px_60px_-15px_rgba(147,51,234,0.15)] sm:rounded-[60px]">
+        <div class="absolute inset-0 z-0 overflow-hidden bg-[#F3F0FF]">
+          <div class="animate-float-slow absolute right-[-10%] top-[-20%] h-[800px] w-[800px] rounded-full bg-gradient-to-b from-purple-300 via-indigo-300 to-transparent opacity-60 blur-[120px] mix-blend-multiply"></div>
+          <div class="animate-float-medium absolute bottom-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-violet-400 via-fuchsia-200 to-blue-200 opacity-50 blur-[100px] mix-blend-multiply"></div>
+          <div class="animate-float-slow absolute left-[40%] top-[30%] h-[500px] w-[500px] rounded-full bg-purple-200 opacity-40 blur-[80px] mix-blend-overlay"></div>
+        </div>
+
+        <div class="relative z-10 flex h-full w-full flex-col justify-between gap-10 px-8 py-10 md:px-16 lg:flex-row lg:items-center lg:px-20">
+          <div class="max-w-2xl pt-10 lg:pt-0">
+            <div class="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-md">
+              <span class="font-mono text-[11px] uppercase tracking-[0.18em] text-gray-700">Catálogo Noivas 2026</span>
+            </div>
+            <h1 class="animate-fade-in-up delay-100 mt-7 text-5xl font-semibold leading-[1.02] tracking-tighter text-gray-900 sm:text-6xl md:text-7xl">
+              A beleza de ser quem você é
+              <span class="text-purple-600">nesse dia especial</span>
+            </h1>
+            <p class="animate-fade-in-up delay-200 mt-6 max-w-xl text-lg leading-relaxed text-gray-600">
+              Atendimento exclusivo para noivas atemporais, com preparação personalizada e experiência completa do pré-casamento ao dia do evento.
+            </p>
+            <div class="animate-fade-in-up delay-300 mt-9 flex flex-wrap gap-3">
+              <a href="https://wa.me/55XXXXXXXXXXX?text=Tenho%20interesse%20no%20Dia%20da%20Noiva" class="btn-beam-wrapper">
+                <span class="btn-beam-border"></span>
+                <span class="btn-beam-inner">Quero o Dia da Noiva <i data-lucide="arrow-up-right" class="h-4 w-4"></i></span>
+              </a>
+              <a href="#pacotes" class="btn-outline btn-base">Ver investimento</a>
+            </div>
+          </div>
+
+          <div class="glass w-full max-w-md rounded-[32px] p-6 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.15)] reveal-on-scroll">
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-gray-500">Pacote destaque</p>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-gray-900">Dia da Noiva</h2>
+            <p class="mt-1 text-4xl font-semibold text-purple-700">R$ 3.000</p>
+            <ul class="mt-5 space-y-3 text-sm text-gray-700">
+              <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 text-purple-700"></i>Maquiagem à prova d'água (cílios inclusos)</li>
+              <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 text-purple-700"></i>Penteado com aplicação de véu e grinalda</li>
+              <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 text-purple-700"></i>Prévia de maquiagem e penteado na semana anterior</li>
+              <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 text-purple-700"></i>Suporte personalizado</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="pacotes" class="mt-20 px-1 sm:px-4">
+        <div class="reveal-on-scroll mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-2xl">
+            <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Investimento</p>
+            <h2 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900">Pacotes disponíveis</h2>
+          </div>
+          <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20ajuda%20para%20escolher%20meu%20pacote%20de%20noiva" class="btn-primary btn-base">Escolher pacote</a>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <article class="reveal-on-scroll delay-100 rounded-[32px] border border-gray-100 bg-[#F9F8FF] p-8 transition-transform duration-300 hover:-translate-y-1">
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-gray-500">Pacote principal</p>
+            <h3 class="mt-3 text-2xl font-semibold text-gray-900">Dia da Noiva</h3>
+            <p class="mt-1 text-3xl font-bold text-gray-900">R$ 3.000</p>
+            <ul class="mt-5 space-y-2 text-sm text-gray-700">
+              <li>• Maquiagem + penteado</li>
+              <li>• Prova da maquiagem e do penteado</li>
+              <li>• Assessoria para acessórios</li>
+            </ul>
+          </article>
+
+          <article class="reveal-on-scroll delay-200 rounded-[32px] border border-gray-100 bg-[#F9F8FF] p-8 transition-transform duration-300 hover:-translate-y-1">
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-gray-500">Acompanhamento</p>
+            <h3 class="mt-3 text-2xl font-semibold text-gray-900">Retoque Noiva</h3>
+            <p class="mt-1 text-3xl font-bold text-gray-900">R$ 850</p>
+            <ul class="mt-5 space-y-2 text-sm text-gray-700">
+              <li>• Retoque da maquiagem</li>
+              <li>• Retirada do véu</li>
+              <li>• Troca/retoque de penteado</li>
+              <li>• Até 2h no local</li>
+            </ul>
+          </article>
+
+          <article class="reveal-on-scroll delay-300 rounded-[32px] border border-gray-100 bg-[#F9F8FF] p-8 transition-transform duration-300 hover:-translate-y-1">
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-gray-500">Família</p>
+            <h3 class="mt-3 text-2xl font-semibold text-gray-900">Mãe da Noiva</h3>
+            <p class="mt-1 text-3xl font-bold text-gray-900">R$ 650</p>
+            <ul class="mt-5 space-y-2 text-sm text-gray-700">
+              <li>• Maquiagem (cílios inclusos)</li>
+              <li>• Penteado</li>
+              <li>• Assessoria para acessório</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="reserva" class="mt-20 grid grid-cols-1 gap-6 px-1 sm:px-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <article class="reveal-on-scroll rounded-[32px] border border-gray-100 bg-white p-8 shadow-sm">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Reserva</p>
+          <h3 class="mt-2 text-3xl font-semibold tracking-tight text-gray-900">Como funciona a confirmação</h3>
+          <p class="mt-5 rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-sm leading-relaxed text-purple-900">
+            A data só será reservada mediante pagamento de <strong>30% do valor</strong> na assinatura do contrato. O valor restante pode ser parcelado no cartão.
+          </p>
+          <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="rounded-2xl bg-gray-50 p-4">
+              <p class="font-mono text-[11px] uppercase text-gray-500">01</p>
+              <p class="mt-2 text-sm text-gray-700">Escolha o pacote ideal.</p>
+            </div>
+            <div class="rounded-2xl bg-gray-50 p-4">
+              <p class="font-mono text-[11px] uppercase text-gray-500">02</p>
+              <p class="mt-2 text-sm text-gray-700">Assine o contrato.</p>
+            </div>
+            <div class="rounded-2xl bg-gray-50 p-4">
+              <p class="font-mono text-[11px] uppercase text-gray-500">03</p>
+              <p class="mt-2 text-sm text-gray-700">Efetue o sinal para bloquear a data.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="reveal-on-scroll delay-100 rounded-[32px] border border-gray-100 bg-white p-8 shadow-sm">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Motion Placeholder</p>
+          <h3 class="mt-2 text-3xl font-semibold tracking-tight text-gray-900">Área para visual 2D</h3>
+          <p class="mt-4 text-sm leading-relaxed text-gray-600">Bloco reservado para cenas animadas de preparação, penteado, maquiagem e resultado final.</p>
+          <div class="mt-6 grid grid-cols-2 gap-3">
+            <div class="aspect-[4/5] rounded-2xl bg-gradient-to-br from-purple-100 to-purple-50"></div>
+            <div class="aspect-[4/5] rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-50"></div>
+            <div class="aspect-[4/5] rounded-2xl bg-gradient-to-br from-fuchsia-100 to-purple-50"></div>
+            <div class="aspect-[4/5] rounded-2xl bg-gradient-to-br from-blue-100 to-purple-50"></div>
+          </div>
+        </article>
+      </section>
+
+      <section id="contato" class="relative mt-20 px-1 sm:px-4">
+        <div class="absolute -inset-1 rounded-[44px] bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-pink-500/20 opacity-40 blur-2xl"></div>
+        <div class="reveal-on-scroll relative rounded-[40px] bg-[#0A0A0B] px-8 py-12 text-white shadow-2xl ring-1 ring-white/10 sm:px-12">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Atendimento</p>
+          <h3 class="mt-3 max-w-2xl text-4xl font-semibold tracking-tight">Vamos montar sua produção completa?</h3>
+          <p class="mt-4 max-w-2xl text-gray-300">Envie data, local e horário do evento para receber direcionamento de pacote e disponibilidade.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="https://wa.me/55XXXXXXXXXXX?text=Ol%C3%A1%2C%20quero%20fechar%20meu%20atendimento%20de%20noiva" class="btn-beam-wrapper">
+              <span class="btn-beam-border"></span>
+              <span class="btn-beam-inner">Falar no WhatsApp <i data-lucide="send" class="h-4 w-4"></i></span>
+            </a>
+            <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20tirar%20d%C3%BAvidas%20sobre%20Noivas%202026" class="btn-base btn-outline border-white/20 text-white hover:bg-white/10 hover:border-white/40">Tirar dúvidas</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20tirar%20d%C3%BAvidas%20sobre%20Noivas%202026" class="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:scale-[1.03]" aria-label="Abrir WhatsApp">
+      <i data-lucide="message-circle-more" class="h-4 w-4"></i>
+      Tirar dúvida
+    </a>
+
+    <script>
+      lucide.createIcons();
+      document.addEventListener("DOMContentLoaded", () => {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+        document.querySelectorAll(".reveal-on-scroll").forEach((el) => observer.observe(el));
+      });
+    </script>
+  </body>
+</html>

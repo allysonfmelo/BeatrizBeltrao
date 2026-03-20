@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Penteados 2026 | Kelly Silva Professional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-body: #ffffff;
+        --bg-surface: #fafafa;
+        --text-primary: #09090b;
+        --border-light: #e4e4e7;
+        --accent: #7c3aed;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg-body);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .font-mono { font-family: "JetBrains Mono", monospace; }
+
+      @keyframes float {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes beam-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .animate-float-slow { animation: float 20s ease-in-out infinite; }
+      .animate-float-medium { animation: float 15s ease-in-out infinite reverse; }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.8s var(--ease-out-expo) forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      .reveal-on-scroll {
+        opacity: 0;
+        transform: translateY(40px) scale(0.96);
+        filter: blur(4px);
+        transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s ease-out;
+      }
+
+      .reveal-on-scroll.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+
+      .delay-100 { transition-delay: 0.1s; animation-delay: 0.1s; }
+      .delay-200 { transition-delay: 0.2s; animation-delay: 0.2s; }
+      .delay-300 { transition-delay: 0.3s; animation-delay: 0.3s; }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.68);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-base {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s var(--ease-out-expo);
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background: #000;
+        color: #fff;
+        border: 1px solid #000;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: #111827;
+        border: 1px solid var(--border-light);
+      }
+
+      .btn-outline:hover {
+        border-color: #000;
+        background: var(--bg-surface);
+      }
+
+      .btn-beam-wrapper {
+        position: relative;
+        display: inline-flex;
+        padding: 2px;
+        border-radius: 9999px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-beam-wrapper:hover { transform: scale(1.02); }
+
+      .btn-beam-border {
+        position: absolute;
+        inset: -200%;
+        background: conic-gradient(from 0deg, transparent 0 320deg, var(--accent) 360deg);
+        animation: beam-spin 3s linear infinite;
+      }
+
+      .btn-beam-inner {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: 9999px;
+        background: #fff;
+        color: #111827;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body class="bg-white text-gray-900 selection:bg-purple-200 selection:text-purple-900">
+    <nav class="sticky top-0 z-50 border-b border-transparent bg-white/80 backdrop-blur-xl">
+      <div class="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6">
+        <a href="#" class="flex items-center gap-1 text-xl font-semibold tracking-tight text-black">Kelly Silva Professional <span class="opacity-40">_</span></a>
+        <div class="hidden items-center gap-10 md:flex">
+          <a href="#servicos" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Serviços</a>
+          <a href="#instrucoes" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Instruções</a>
+          <a href="#contato" class="text-base font-normal text-gray-600 transition-colors hover:text-black">Contato</a>
+        </div>
+        <a href="https://wa.me/55XXXXXXXXXXX?text=Ol%C3%A1%2C%20quero%20informa%C3%A7%C3%B5es%20sobre%20penteados" class="btn-outline btn-base">
+          <i data-lucide="message-circle" class="h-4 w-4"></i> WhatsApp
+        </a>
+      </div>
+    </nav>
+
+    <main class="mx-auto max-w-[1440px] px-4 pb-20 sm:px-6">
+      <section class="relative isolate mt-4 min-h-[640px] overflow-hidden rounded-[40px] ring-1 ring-black/5 shadow-[0_20px_60px_-15px_rgba(147,51,234,0.15)] sm:rounded-[60px]">
+        <div class="absolute inset-0 z-0 overflow-hidden bg-[#F3F0FF]">
+          <div class="animate-float-slow absolute right-[-10%] top-[-20%] h-[800px] w-[800px] rounded-full bg-gradient-to-b from-purple-300 via-indigo-300 to-transparent opacity-60 blur-[120px] mix-blend-multiply"></div>
+          <div class="animate-float-medium absolute bottom-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-violet-400 via-fuchsia-200 to-blue-200 opacity-50 blur-[100px] mix-blend-multiply"></div>
+          <div class="animate-float-slow absolute left-[40%] top-[30%] h-[500px] w-[500px] rounded-full bg-purple-200 opacity-40 blur-[80px] mix-blend-overlay"></div>
+        </div>
+
+        <div class="relative z-10 grid h-full gap-10 px-8 py-10 md:px-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:px-20">
+          <div class="pt-10 lg:pt-0">
+            <div class="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-md">
+              <span class="font-mono text-[11px] uppercase tracking-[0.18em] text-gray-700">Catálogo Penteados 2026</span>
+            </div>
+            <h1 class="animate-fade-in-up delay-100 mt-7 text-5xl font-semibold leading-[1.02] tracking-tighter text-gray-900 sm:text-6xl md:text-7xl">
+              Penteados sociais
+              <span class="text-purple-600">com acabamento profissional</span>
+            </h1>
+            <p class="animate-fade-in-up delay-200 mt-6 max-w-xl text-lg leading-relaxed text-gray-600">
+              Atendimento da profissional parceira Kelly Silva, com foco em estrutura, durabilidade e resultado visual para eventos.
+            </p>
+            <div class="animate-fade-in-up delay-300 mt-9 flex flex-wrap gap-3">
+              <a href="https://wa.me/55XXXXXXXXXXX?text=Tenho%20interesse%20em%20Penteado%20Social" class="btn-beam-wrapper">
+                <span class="btn-beam-border"></span>
+                <span class="btn-beam-inner">Agendar Penteado <i data-lucide="arrow-up-right" class="h-4 w-4"></i></span>
+              </a>
+              <a href="#servicos" class="btn-outline btn-base">Ver valores</a>
+            </div>
+          </div>
+
+          <div class="glass reveal-on-scroll rounded-[32px] p-6 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.15)]">
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-gray-500">Serviço principal</p>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-gray-900">Penteado Social</h2>
+            <p class="mt-1 text-4xl font-semibold text-purple-700">R$ 190</p>
+            <p class="mt-4 text-sm leading-relaxed text-gray-700">Modelagem e finalização para ocasiões especiais, com preparação ideal para melhor fixação.</p>
+            <div class="mt-5 rounded-xl border border-purple-100 bg-purple-50 p-3 text-xs text-purple-900">Serviço parceiro dentro da experiência do studio.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="servicos" class="mt-20 px-1 sm:px-4">
+        <div class="reveal-on-scroll mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-2xl">
+            <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Serviços</p>
+            <h2 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900">Tabela de penteados</h2>
+          </div>
+          <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20agendar%20meu%20penteado" class="btn-primary btn-base">Agendar horário</a>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <article class="reveal-on-scroll delay-100 rounded-[32px] border border-gray-100 bg-[#F9F8FF] p-8">
+            <h3 class="text-2xl font-semibold text-gray-900">Penteado Social</h3>
+            <p class="mt-1 text-3xl font-bold text-gray-900">R$ 190</p>
+            <p class="mt-4 text-sm text-gray-700">Produção para festas e eventos com acabamento elegante e estrutura duradoura.</p>
+          </article>
+
+          <article class="reveal-on-scroll delay-200 rounded-[32px] border border-gray-100 bg-[#F9F8FF] p-8">
+            <h3 class="text-2xl font-semibold text-gray-900">Escova / Babyliss</h3>
+            <p class="mt-1 text-3xl font-bold text-gray-900">R$ 120</p>
+            <p class="mt-4 text-sm text-gray-700">Finalização com movimento e definição conforme o estilo desejado.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="instrucoes" class="mt-20 grid grid-cols-1 gap-6 px-1 sm:px-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <article class="reveal-on-scroll rounded-[32px] border border-gray-100 bg-white p-8 shadow-sm">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Preparo do cabelo</p>
+          <h3 class="mt-2 text-3xl font-semibold tracking-tight text-gray-900">Instruções importantes</h3>
+          <div class="mt-6 space-y-4">
+            <div class="rounded-2xl bg-gray-50 p-4">
+              <p class="font-mono text-[11px] uppercase text-gray-500">Cabelos lisos e ondulados</p>
+              <p class="mt-2 text-sm text-gray-700">Chegar com cabelo lavado apenas com shampoo e naturalmente seco no momento do atendimento.</p>
+              <p class="mt-2 text-sm text-amber-900">Não é possível garantir a durabilidade caso a cliente chegue com o cabelo molhado.</p>
+            </div>
+            <div class="rounded-2xl bg-gray-50 p-4">
+              <p class="font-mono text-[11px] uppercase text-gray-500">Cabelos cacheados</p>
+              <p class="mt-2 text-sm text-gray-700">Finalizar como de costume, evitando excesso de produto. Será usado babyliss apropriado para definição dos cachos.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="reveal-on-scroll delay-100 rounded-[32px] border border-gray-100 bg-[#0A0A0B] p-8 text-white shadow-sm">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Canal oficial</p>
+          <h3 class="mt-2 text-3xl font-semibold tracking-tight">Instagram</h3>
+          <p class="mt-3 text-lg text-gray-300">@KELLY.SILVAPROFISSIONAL</p>
+          <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20agendar%20penteado" class="btn-beam-wrapper mt-7">
+            <span class="btn-beam-border"></span>
+            <span class="btn-beam-inner">Falar no WhatsApp <i data-lucide="send" class="h-4 w-4"></i></span>
+          </a>
+        </article>
+      </section>
+
+      <section id="contato" class="relative mt-20 px-1 sm:px-4">
+        <div class="absolute -inset-1 rounded-[44px] bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-pink-500/20 opacity-40 blur-2xl"></div>
+        <div class="reveal-on-scroll relative rounded-[40px] bg-white px-8 py-12 shadow-xl ring-1 ring-black/5 sm:px-12">
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-gray-500">Atendimento</p>
+          <h3 class="mt-3 text-4xl font-semibold tracking-tight text-gray-900">Quer confirmar seu horário?</h3>
+          <p class="mt-4 max-w-2xl text-gray-600">Envie data, horário e tipo de finalização para receber confirmação de disponibilidade.</p>
+        </div>
+      </section>
+    </main>
+
+    <a href="https://wa.me/55XXXXXXXXXXX?text=Quero%20tirar%20d%C3%BAvidas%20sobre%20penteados" class="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:scale-[1.03]" aria-label="Abrir WhatsApp">
+      <i data-lucide="message-circle-more" class="h-4 w-4"></i>
+      Tirar dúvida
+    </a>
+
+    <script>
+      lucide.createIcons();
+      document.addEventListener("DOMContentLoaded", () => {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+        document.querySelectorAll(".reveal-on-scroll").forEach((el) => observer.observe(el));
+      });
+    </script>
+  </body>
+</html>
