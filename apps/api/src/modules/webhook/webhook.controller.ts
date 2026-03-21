@@ -4,6 +4,7 @@ import { logger } from "../../lib/logger.js";
 
 /**
  * POST /api/v1/webhook/evolution — Handle incoming WhatsApp messages.
+ * Buffers messages in Redis and delegates to Trigger.dev for processing.
  */
 export async function handleEvolution(c: Context) {
   try {

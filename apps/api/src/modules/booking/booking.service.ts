@@ -1,4 +1,4 @@
-import { eq, and, lt, desc, gte, lte } from "drizzle-orm";
+import { eq, and, lt, gt, desc, gte, lte } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
 import { bookings, clients, services } from "@studio/db";
 import { logger } from "../../lib/logger.js";
@@ -380,6 +380,48 @@ export async function findById(id: string) {
       price: row.servicePrice,
     },
   };
+}
+
+/**
+ * Returns pending bookings with their deadlines for reminder processing.
+ */
+export async function getPendingBookingsForReminders(): Promise<
+  Array<{ id: string; clientId: string; paymentDeadline: Date }>
+> {
+  const now = new Date();
+  return db
+    .select({
+      id: bookings.id,
+      clientId: bookings.clientId,
+      paymentDeadline: bookings.paymentDeadline,
+    })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.status, "pendente"),
+        gt(bookings.paymentDeadline, now)
+      )
+    );
+}
+
+/**
+ * Sends a payment reminder WhatsApp message to a client.
+ */
+export async function sendPaymentReminderToClient(
+  clientId: string,
+  type: "6h" | "2h"
+): Promise<void> {
+  const client = await db.query.clients.findFirst({
+    where: eq(clients.id, clientId),
+  });
+  if (!client) return;
+
+  const message =
+    type === "6h"
+      ? "Oi! ✨ Lembrando que seu pré-agendamento ainda está pendente. Faltam cerca de 6 horas para o prazo de pagamento do sinal. Não perca seu horário! 💄"
+      : "Oi! ⏰ Última chamada! Faltam cerca de 2 horas para o prazo de pagamento do sinal do seu agendamento. Após esse prazo, o horário será liberado. 💬";
+
+  await notificationService.sendWhatsAppMessage(client.phone, message);
 }
 
 /**

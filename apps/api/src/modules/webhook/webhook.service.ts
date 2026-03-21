@@ -1,13 +1,20 @@
 import { evolutionWebhookSchema, extractTextFromWebhook, extractPhoneFromJid } from "@studio/shared/validators";
 import { asaasWebhookSchema } from "@studio/shared/validators";
-import * as sophiaService from "../sophia/sophia.service.js";
+import { runs } from "@trigger.dev/sdk/v3";
+import { bufferWhatsappMessage } from "../../trigger/buffer-whatsapp-message.js";
 import * as paymentService from "../payment/payment.service.js";
 import * as notificationService from "../notification/notification.service.js";
+import { redis, BUFFER_PREFIX, BUFFER_TTL } from "../../config/redis.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../config/env.js";
 
+/** Redis key prefix for tracking active buffer run IDs */
+const BUFFER_RUN_PREFIX = "buffer-run:";
+
 /**
  * Processes an incoming Evolution API webhook (WhatsApp message).
+ * Instead of processing inline, buffers messages in Redis and uses
+ * Trigger.dev delayed tasks for debounced processing.
  */
 export async function handleEvolutionWebhook(body: unknown): Promise<void> {
   // Validate payload
@@ -54,9 +61,43 @@ export async function handleEvolutionWebhook(body: unknown): Promise<void> {
     return;
   }
 
-  // Process through Sophia
-  logger.info("Processing WhatsApp message", { phone, messageLength: text.length });
-  await sophiaService.processMessage(phone, text);
+  // === BUFFER FLOW ===
+  // 1. Accumulate message in Redis (RPUSH preserves chronological order)
+  const bufferKey = `${BUFFER_PREFIX}${phone}`;
+  await redis.rpush(bufferKey, text);
+  await redis.expire(bufferKey, BUFFER_TTL);
+
+  // 2. Cancel previous buffer run for this phone (debounce reset)
+  const runKey = `${BUFFER_RUN_PREFIX}${phone}`;
+  const previousRunId = await redis.get(runKey);
+
+  if (previousRunId) {
+    try {
+      await runs.cancel(previousRunId);
+      logger.debug("Cancelled previous buffer run", { phone, runId: previousRunId });
+    } catch {
+      // Run may have already completed or been cancelled — safe to ignore
+      logger.debug("Could not cancel previous buffer run (may have completed)", {
+        phone,
+        runId: previousRunId,
+      });
+    }
+  }
+
+  // 3. Schedule new buffer task with 15s delay
+  const handle = await bufferWhatsappMessage.trigger(
+    { phone },
+    { delay: "15s" }
+  );
+
+  // 4. Store the new run ID in Redis for future cancellation
+  await redis.set(runKey, handle.id, "EX", BUFFER_TTL);
+
+  logger.info("Message buffered, trigger scheduled (15s delay)", {
+    phone,
+    messageLength: text.length,
+    runId: handle.id,
+  });
 }
 
 /**

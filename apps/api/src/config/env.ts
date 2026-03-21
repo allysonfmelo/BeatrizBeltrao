@@ -23,6 +23,8 @@ const envSchema = z.object({
   PAYMENT_TIMEOUT_HOURS: z.coerce.number().default(24),
   MAQUIADORA_PHONE: z.string().optional(),
   MAQUIADORA_EMAIL: z.string().email().optional(),
+  TRIGGER_SECRET_KEY: z.string().min(1).optional(),
+  REDIS_URL: z.string().default("redis://localhost:6379"),
 });
 
 function loadEnv() {

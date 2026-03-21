@@ -11,7 +11,14 @@
     "db:generate": "turbo db:generate --filter=@studio/db",
     "db:migrate": "turbo db:migrate --filter=@studio/db",
     "db:seed": "turbo db:seed --filter=@studio/db",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "trigger:dev": "pnpm --filter @studio/api trigger:dev",
+    "trigger:deploy": "pnpm --filter @studio/api trigger:deploy"
+  },
+  "pnpm": {
+    "overrides": {
+      "drizzle-orm": "0.39.3"
+    }
   },
   "devDependencies": {
     "turbo": "^2.4.0",

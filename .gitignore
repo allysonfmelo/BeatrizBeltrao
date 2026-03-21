@@ -25,6 +25,9 @@ Thumbs.db
 # Turbo
 .turbo/
 
+# Trigger.dev
+.trigger/
+
 # Drizzle
 drizzle/
 

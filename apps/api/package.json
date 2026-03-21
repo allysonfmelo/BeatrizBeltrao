@@ -9,14 +9,18 @@
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "trigger:dev": "npx trigger.dev@latest dev",
+    "trigger:deploy": "npx trigger.dev@latest deploy"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",
     "@studio/db": "workspace:*",
     "@studio/shared": "workspace:*",
+    "@trigger.dev/sdk": "^4.4.3",
     "drizzle-orm": "^0.39.0",
     "hono": "^4.7.0",
+    "ioredis": "^5.10.1",
     "openai": "^6.32.0",
     "resend": "^6.9.4",
     "zod": "^3.24.0"
@@ -24,6 +28,7 @@
   "devDependencies": {
     "@studio/eslint-config": "workspace:*",
     "@studio/ts-config": "workspace:*",
+    "@trigger.dev/build": "4.4.3",
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
     "tsx": "^4.19.0",

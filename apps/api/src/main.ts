@@ -2,7 +2,6 @@ import { serve } from "@hono/node-server";
 import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
-import { startBookingCron } from "./modules/booking/booking.cron.js";
 
 const port = env.PORT;
 
@@ -13,7 +12,7 @@ serve({
   port,
 });
 
-// Start background jobs
-startBookingCron();
-
+// Background jobs are now managed by Trigger.dev
+// Run `npx trigger.dev@latest dev` to start the task runner
 logger.info(`Server running on http://localhost:${port}`);
+logger.info("Background tasks managed by Trigger.dev — run 'pnpm trigger:dev' to start");
