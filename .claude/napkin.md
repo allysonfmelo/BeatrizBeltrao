@@ -28,3 +28,28 @@
 - `findById` with joins uses `db.select().from().leftJoin().where()` — the chain ends at `.where()` (resolves there). `listBookings` adds `.orderBy().limit().offset()` — mock chains need different terminal methods.
 - Pre-existing lint issues fixed: unused `clients` import in payment.service.ts, unused `formatBRL` in sophia.tools.ts.
 - packages/ui has no eslint setup (placeholder, Fase 3) — removed its lint script to prevent turbo failure.
+
+## Session 2026-03-20 — Waves 6 e 7 (Fase 3)
+
+- `apps/web` deixou de ser placeholder e virou app Next.js 14 funcional com rotas de dashboard.
+- Wave 6 implementada em `/dashboard/clientes` com busca por nome/telefone/email consumindo `GET /api/v1/clients`.
+- Wave 7 implementada em `/dashboard/clientes/[id]` com histórico por cliente consumindo novo endpoint `GET /api/v1/clients/:id/bookings`.
+- `client.service.list` agora calcula `meta.total` por query de contagem (antes retornava `data.length`).
+- Novo fluxo backend em `client`:
+  - controller `getClientBookings`
+  - service `listBookingsByClient`
+  - rota `/:id/bookings`
+- Suíte de validação executada com sucesso:
+  - `pnpm --filter @studio/api test` (98 testes)
+  - `pnpm --filter @studio/api typecheck`
+  - `pnpm --filter @studio/web typecheck`
+  - `pnpm --filter @studio/web build`
+- Ajuste de consistência final:
+  - `tsconfig.json` da raiz alterado para `./packages/ts-config/base.json` (evita dependência de symlink `@studio/ts-config` no root `node_modules`).
+- Observação de validação:
+  - `turbo` pode mostrar warnings antigos quando um pacote está em cache (`cache hit, replaying logs`); para confirmar estado real, rodar o comando do pacote diretamente (`pnpm --filter @studio/shared test`).
+
+## Session 2026-03-20 — Webhook ASAAS guidance
+
+- Em macOS/zsh neste ambiente, `timeout` não está disponível por padrão (GNU coreutils). Para processos longos (ex.: `ngrok`), usar sessão TTY e interromper com `Ctrl+C`.
+- Endpoint de webhook ASAAS já implementado em `POST /api/v1/webhook/asaas`; aceita token via header `asaas-access-token` ou query `?token=...`.

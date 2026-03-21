@@ -1,3 +1,3 @@
 {
-  "extends": "@studio/ts-config/base.json"
+  "extends": "./packages/ts-config/base.json"
 }

@@ -1,6 +1,6 @@
-import { eq, ilike, or, count, max } from "drizzle-orm";
+import { eq, ilike, or, count, max, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
-import { clients, bookings } from "@studio/db";
+import { clients, bookings, services } from "@studio/db";
 import { logger } from "../../lib/logger.js";
 import type { CreateClientDTO } from "@studio/shared/validators";
 
@@ -83,6 +83,11 @@ export async function list(params: { search?: string; page?: number; limit?: num
 
   const where = conditions.length > 0 ? conditions[0] : undefined;
 
+  const [countRow] = await db
+    .select({ total: count(clients.id) })
+    .from(clients)
+    .where(where);
+
   const rows = await db
     .select({
       id: clients.id,
@@ -116,5 +121,117 @@ export async function list(params: { search?: string; page?: number; limit?: num
     lastBookingDate: row.lastBookingDate,
   }));
 
-  return { data, meta: { page, limit, total: data.length } };
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total: Number(countRow?.total ?? 0),
+    },
+  };
+}
+
+/**
+ * Lists booking history for a specific client with optional filters and pagination.
+ * Includes enriched service data for each booking.
+ */
+export async function listBookingsByClient(
+  clientId: string,
+  params: {
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }
+) {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 20;
+  const offset = (page - 1) * limit;
+
+  const conditions = [eq(bookings.clientId, clientId)];
+
+  if (params.status) {
+    conditions.push(
+      eq(
+        bookings.status,
+        params.status as "pendente" | "confirmado" | "cancelado" | "concluido" | "expirado"
+      )
+    );
+  }
+  if (params.dateFrom) {
+    conditions.push(gte(bookings.scheduledDate, params.dateFrom));
+  }
+  if (params.dateTo) {
+    conditions.push(lte(bookings.scheduledDate, params.dateTo));
+  }
+
+  const where = and(...conditions);
+
+  const [countRow] = await db
+    .select({ total: count(bookings.id) })
+    .from(bookings)
+    .where(where);
+
+  const rows = await db
+    .select({
+      id: bookings.id,
+      clientId: bookings.clientId,
+      serviceId: bookings.serviceId,
+      scheduledDate: bookings.scheduledDate,
+      scheduledTime: bookings.scheduledTime,
+      endTime: bookings.endTime,
+      status: bookings.status,
+      totalPrice: bookings.totalPrice,
+      depositAmount: bookings.depositAmount,
+      googleCalendarEventId: bookings.googleCalendarEventId,
+      paymentDeadline: bookings.paymentDeadline,
+      cancellationReason: bookings.cancellationReason,
+      createdAt: bookings.createdAt,
+      updatedAt: bookings.updatedAt,
+      serviceName: services.name,
+      serviceType: services.type,
+      serviceCategory: services.category,
+      servicePrice: services.price,
+      serviceDurationMinutes: services.durationMinutes,
+    })
+    .from(bookings)
+    .leftJoin(services, eq(bookings.serviceId, services.id))
+    .where(where)
+    .orderBy(desc(bookings.scheduledDate), desc(bookings.scheduledTime))
+    .limit(limit)
+    .offset(offset);
+
+  const data = rows.map((row) => ({
+    id: row.id,
+    clientId: row.clientId,
+    serviceId: row.serviceId,
+    scheduledDate: row.scheduledDate,
+    scheduledTime: row.scheduledTime,
+    endTime: row.endTime,
+    status: row.status,
+    totalPrice: row.totalPrice,
+    depositAmount: row.depositAmount,
+    googleCalendarEventId: row.googleCalendarEventId,
+    paymentDeadline: row.paymentDeadline,
+    cancellationReason: row.cancellationReason,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    service: {
+      name: row.serviceName,
+      type: row.serviceType,
+      category: row.serviceCategory,
+      price: row.servicePrice,
+      durationMinutes: row.serviceDurationMinutes,
+    },
+  }));
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total: Number(countRow?.total ?? 0),
+    },
+  };
 }

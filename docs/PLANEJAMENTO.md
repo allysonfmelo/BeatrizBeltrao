@@ -20,7 +20,8 @@
 | Fase 1 (Core) | Wave 3 | Concluido | `.claude/napkin.md` (Session 2026-03-20 — Wave 3 Implementation), `apps/api/src/modules/*/__tests__/` | Consolidar em commit unico (testes e ajustes de robustez) |
 | Fase 2 (Resumos + Operacional) | Wave 4 (resumo diario) | Planejado | `apps/api/src/modules/report/.gitkeep`, `docs/PRD.md` (Fase 2) | Implementar em paralelo com a Wave 5 |
 | Fase 2 (Resumos + Operacional) | Wave 5 (operacional) | Planejado | `apps/api/src/modules/booking/booking.cron.ts`, `apps/api/src/modules/webhook/webhook.service.ts`, `docs/PRD.md` (Fase 2) | Implementar em paralelo com a Wave 4 |
-| Fase 3 (Dashboard) | Wave Dashboard | Planejado | `apps/web/src`, `packages/ui`, `docs/PRD.md` (Fase 3) | Iniciar apos fechamento completo da Fase 2 (Fase 3 permanece pendente) |
+| Fase 3 (Dashboard) | Wave 6 (clientes com busca) | Concluido | `apps/web/src/app/dashboard/clientes/page.tsx`, `apps/web/src/components/clients-table.tsx` | Evoluir filtros e metricas no dashboard |
+| Fase 3 (Dashboard) | Wave 7 (historico por cliente) | Concluido | `apps/web/src/app/dashboard/clientes/[id]/page.tsx`, `apps/api/src/modules/client/client.routes.ts` | Evoluir visualizacoes analiticas por cliente |
 
 ## 3. O Que Ja Foi Criado
 
@@ -69,8 +70,8 @@
 | Fase 3 | Login com Supabase Auth | Planejado | `apps/web/src`, `.env.example` (`NEXT_PUBLIC_SUPABASE_*`) |
 | Fase 3 | Dashboard: agendamentos do dia/semana/mes | Planejado | `apps/web/src` |
 | Fase 3 | Dashboard: metricas de faturamento | Planejado | `apps/web/src` |
-| Fase 3 | Dashboard: lista de clientes com busca | Planejado | `apps/web/src` |
-| Fase 3 | Dashboard: historico de agendamentos por cliente | Planejado | `apps/web/src` |
+| Fase 3 | Dashboard: lista de clientes com busca | Concluido | `apps/web/src/app/dashboard/clientes/page.tsx`, `apps/web/src/components/client-search-form.tsx` |
+| Fase 3 | Dashboard: historico de agendamentos por cliente | Concluido | `apps/web/src/app/dashboard/clientes/[id]/page.tsx`, `apps/api/src/modules/client/client.service.ts` |
 | Fase 3 | Dashboard: taxa de cancelamento e servicos mais procurados | Planejado | `apps/web/src` |
 | Fase 3 | Design responsivo (mobile-first) | Planejado | `apps/web/src` |
 | Fase 3 | Deploy no Vercel | Planejado | `apps/web/package.json`, `docs/PRD.md` |
@@ -163,3 +164,4 @@
 | 2026-03-20 | Wave 2 registrada como concluida localmente | `.claude/napkin.md` |
 | 2026-03-20 | Wave 3 registrada como concluida localmente | `.claude/napkin.md` |
 | 2026-03-20 | Criacao inicial de `docs/PLANEJAMENTO.md` como referencia operacional viva | `docs/PLANEJAMENTO.md` |
+| 2026-03-20 | Waves 6 e 7 executadas (clientes com busca + historico por cliente) | `apps/web/src/app/dashboard/clientes/*`, `apps/api/src/modules/client/*` |
