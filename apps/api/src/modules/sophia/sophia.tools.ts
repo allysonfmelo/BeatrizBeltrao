@@ -4,8 +4,14 @@ import * as calendarService from "../calendar/calendar.service.js";
 import * as bookingService from "../booking/booking.service.js";
 import * as paymentService from "../payment/payment.service.js";
 import * as clientService from "../client/client.service.js";
+import { env } from "../../config/env.js";
 import * as sophiaContext from "./sophia.context.js";
 import * as notificationService from "../notification/notification.service.js";
+import {
+  getReferenceServices,
+  getServiceReference,
+  type CatalogTopic,
+} from "../service/service-reference.service.js";
 import { logger } from "../../lib/logger.js";
 
 /**
@@ -16,7 +22,7 @@ export const sophiaTools: LlmTool[] = [
     type: "function",
     function: {
       name: "list_services",
-      description: "Lista todos os serviços ativos do estúdio com preços e durações.",
+      description: "Lista serviços e regras oficiais do atendimento usando a referência operacional como fonte prioritária.",
       parameters: {
         type: "object",
         properties: {},
@@ -105,6 +111,24 @@ export const sophiaTools: LlmTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "send_service_pdf",
+      description: "Envia no WhatsApp o catálogo PDF por tema quando a cliente aceitar receber o material.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: {
+            type: "string",
+            description: "Tema do PDF: maquiagem, penteado ou noivas",
+            enum: ["maquiagem", "penteado", "noivas"],
+          },
+        },
+        required: ["topic"],
+      },
+    },
+  },
 ];
 
 /** Context needed to execute tools */
@@ -113,6 +137,14 @@ interface ToolExecutionContext {
   phone: string;
   clientId: string | null;
   collectedData: Record<string, unknown>;
+}
+
+function hasConfirmedFullName(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (normalized.length < 5) return false;
+  const parts = normalized.split(" ").filter(Boolean);
+  return parts.length >= 2;
 }
 
 /**
@@ -155,6 +187,9 @@ export async function executeTool(
       case "handoff_to_human":
         return await executeHandoff(ctx, args.reason as string);
 
+      case "send_service_pdf":
+        return await executeSendServicePdf(ctx, args.topic as string);
+
       default:
         return JSON.stringify({ error: `Ferramenta desconhecida: ${toolCall.name}` });
     }
@@ -166,17 +201,55 @@ export async function executeTool(
 }
 
 async function executeListServices(): Promise<string> {
-  const services = await serviceService.listActive();
-  const formatted = services.map((s) => ({
+  const reference = getServiceReference();
+  const referenceServices = getReferenceServices();
+  const dbServices = await serviceService.listActive();
+
+  const formattedReference = referenceServices.map((item) => {
+    const price =
+      item.pricing.policy === "fixed" && typeof item.pricing.amount_brl === "number"
+        ? `R$ ${item.pricing.amount_brl.toFixed(2)}`
+        : "sob consulta";
+
+    return {
+      key: item.key,
+      name: item.name,
+      type: item.type,
+      category: item.category,
+      mode: item.mode,
+      bookable: item.bookable,
+      handoffRequired: item.handoff_required ?? false,
+      pdfTopic: item.pdf_topic,
+      price,
+      deposit:
+        item.pricing.policy === "fixed" && typeof item.pricing.amount_brl === "number"
+          ? `R$ ${((item.pricing.amount_brl * reference.policies.deposit_percentage) / 100).toFixed(2)}`
+          : "sob consulta",
+      duration:
+        typeof item.duration_minutes === "number"
+          ? `${item.duration_minutes} min`
+          : "sob consulta",
+      notes: item.notes ?? [],
+      careNotes: item.care_notes ?? [],
+    };
+  });
+
+  const formattedDb = dbServices.map((s) => ({
     id: s.id,
     name: s.name,
     type: s.type,
     category: s.category,
     price: `R$ ${parseFloat(s.price).toFixed(2)}`,
-    deposit: `R$ ${(parseFloat(s.price) * 0.3).toFixed(2)}`,
     duration: `${s.durationMinutes} min`,
+    isActive: s.isActive,
   }));
-  return JSON.stringify({ services: formatted });
+
+  return JSON.stringify({
+    sourcePriority: reference.policies.source_priority,
+    services: formattedReference,
+    databaseServices: formattedDb,
+    faq: reference.faq,
+  });
 }
 
 async function executeCheckAvailability(
@@ -231,6 +304,14 @@ async function executeSaveClientData(
       let client = await clientService.findByPhone(phone);
 
       if (!client) {
+        if (!hasConfirmedFullName(merged.clientName)) {
+          return JSON.stringify({
+            success: true,
+            message:
+              "Nome ainda não confirmado para cadastro. Confirme o nome completo da cliente antes de criar o perfil.",
+          });
+        }
+
         client = await clientService.create({
           fullName: merged.clientName as string,
           phone,
@@ -334,6 +415,28 @@ async function executeCreateBooking(
   await sophiaContext.setIntent(ctx.conversationId, "agendamento");
 
   const depositValue = parseFloat(booking.depositAmount);
+  const paymentOnServiceDay = parseFloat(booking.totalPrice) - depositValue;
+  const pixKey = env.PIX_KEY?.trim() || "A definir";
+  const pixHolder = env.PIX_HOLDER_NAME?.trim() || "A definir";
+  const clientName = client.fullName;
+  const preBookingMessage = [
+    "✨ PRÉ-AGENDAMENTO",
+    "",
+    "DADOS DA CLIENTE",
+    `NOME: ${clientName}`,
+    `DATA: ${data.scheduledDate}`,
+    `HORÁRIO: ${data.scheduledTime}`,
+    "",
+    "PAGAMENTO",
+    `💳 Sinal (30%): R$ ${depositValue.toFixed(2)}`,
+    `💰 Pagamento no dia: R$ ${paymentOnServiceDay.toFixed(2)}`,
+    "",
+    `Chave PIX: ${pixKey}`,
+    `Titular: ${pixHolder}`,
+    "",
+    "⏳ O pagamento deve ser realizado em até 24h para reserva da data.",
+    "Após o pagamento, envie o comprovante e aguarde a confirmação do agendamento. 🤍",
+  ].join("\n");
 
   return JSON.stringify({
     success: true,
@@ -345,6 +448,11 @@ async function executeCreateBooking(
     deposit: `R$ ${depositValue.toFixed(2)}`,
     invoiceUrl,
     deadline: "24 horas",
+    preBookingMessage,
+    pix: {
+      key: pixKey,
+      holderName: pixHolder,
+    },
   });
 }
 
@@ -392,5 +500,40 @@ async function executeHandoff(
     success: true,
     message: "Conversa transferida para a Beatriz",
     reason,
+  });
+}
+
+function normalizePdfTopic(topic: string): CatalogTopic | null {
+  const value = topic.trim().toLowerCase();
+
+  if (value === "maquiagem") return "maquiagem";
+  if (value === "penteado") return "penteado";
+  if (value === "noiva" || value === "noivas") return "noivas";
+
+  return null;
+}
+
+async function executeSendServicePdf(
+  ctx: ToolExecutionContext,
+  topicArg: string
+): Promise<string> {
+  const topic = normalizePdfTopic(topicArg);
+  if (!topic) {
+    return JSON.stringify({
+      error: "Tema de PDF inválido. Use: maquiagem, penteado ou noivas.",
+    });
+  }
+
+  await notificationService.sendWhatsAppServicePdf(
+    ctx.phone,
+    topic,
+    ctx.conversationId,
+    "Segue o catálogo para você consultar com calma ✨"
+  );
+
+  return JSON.stringify({
+    success: true,
+    topic,
+    message: "Catálogo enviado com sucesso no WhatsApp.",
   });
 }

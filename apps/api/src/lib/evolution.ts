@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { captureException } from "./sentry.js";
 
 const baseUrl = `${env.EVOLUTION_API_URL}/message`;
 const instance = env.EVOLUTION_INSTANCE_NAME;
@@ -40,7 +41,9 @@ async function evolutionPost<T = EvolutionMessageResponse>({ endpoint, body }: E
       status: response.status,
       response: text,
     });
-    throw new Error(`Evolution API error: ${response.status} - ${text}`);
+    const error = new Error(`Evolution API error: ${response.status} - ${text}`);
+    captureException(error, { source: "evolution.api", endpoint, status: response.status });
+    throw error;
   }
 
   const data = await response.json() as T;

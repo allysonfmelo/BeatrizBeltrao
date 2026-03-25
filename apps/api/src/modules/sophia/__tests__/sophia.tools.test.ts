@@ -18,6 +18,8 @@ vi.mock("../../../config/env.js", () => ({
     ASAAS_ENVIRONMENT: "sandbox",
     DEPOSIT_PERCENTAGE: 30,
     PAYMENT_TIMEOUT_HOURS: 24,
+    PIX_KEY: "81999999999",
+    PIX_HOLDER_NAME: "Deborah Nicolly",
     CORS_ORIGIN: "http://localhost:3000",
     RESEND_FROM_EMAIL: "test@test.com",
   },
@@ -27,6 +29,7 @@ vi.mock("../../../config/env.js", () => ({
 vi.mock("../../../config/supabase.js", () => ({ db: {} }));
 
 vi.mock("../../service/service.service.js");
+vi.mock("../../service/service-reference.service.js");
 vi.mock("../../calendar/calendar.service.js");
 vi.mock("../../booking/booking.service.js");
 vi.mock("../../payment/payment.service.js");
@@ -44,6 +47,7 @@ vi.mock("../../../lib/logger.js", () => ({
 
 import { sophiaTools, executeTool } from "../sophia.tools.js";
 import * as serviceService from "../../service/service.service.js";
+import * as serviceReferenceService from "../../service/service-reference.service.js";
 import * as calendarService from "../../calendar/calendar.service.js";
 import * as bookingService from "../../booking/booking.service.js";
 import * as paymentService from "../../payment/payment.service.js";
@@ -67,7 +71,7 @@ const MOCK_SERVICE = {
 
 const MOCK_CLIENT = {
   id: "cli-1",
-  fullName: "Maria",
+  fullName: "Maria Souza",
   phone: "5511999990000",
   cpf: "12345678901",
   email: "maria@test.com",
@@ -138,6 +142,59 @@ beforeEach(() => {
   vi.mocked(sophiaContext.setHandoff).mockResolvedValue(undefined);
 
   vi.mocked(notificationService.notifyMaquiadora).mockResolvedValue(undefined);
+  vi.mocked(notificationService.sendWhatsAppServicePdf).mockResolvedValue("doc-1");
+
+  vi.mocked(serviceReferenceService.getServiceReference).mockReturnValue({
+    version: "2026.03.24",
+    updated_at: "2026-03-24",
+    policies: {
+      deposit_percentage: 30,
+      payment_timeout_hours: 24,
+      handoff_immediate_topics: ["noiva", "externo"],
+      source_priority: ["service_reference", "database", "catalog_html_pdf"],
+    },
+    pdf_catalog: {
+      maquiagem: { title: "Maquiagem", path: "assets/catalog-html/pdfs/MAQUIAGEM 2026.pdf" },
+      penteado: { title: "Penteado", path: "assets/catalog-html/pdfs/PENTEADO2026.pdf" },
+      noivas: { title: "Noivas", path: "assets/catalog-html/pdfs/Noivas 2026 Bia Beltrão .pdf" },
+    },
+    services: [
+      {
+        key: "maquiagem_social",
+        name: "Maquiagem Social",
+        type: "maquiagem",
+        category: "estudio",
+        mode: "individual",
+        bookable: true,
+        sync_to_db: true,
+        pdf_topic: "maquiagem",
+        pricing: { policy: "fixed", amount_brl: 250 },
+        duration_minutes: 60,
+      },
+    ],
+    faq: [
+      {
+        question: "Como funciona o sinal?",
+        answer: "30% no pré-agendamento.",
+      },
+    ],
+  } as any);
+  vi.mocked(serviceReferenceService.getReferenceServices).mockReturnValue([
+    {
+      key: "maquiagem_social",
+      name: "Maquiagem Social",
+      type: "maquiagem",
+      category: "estudio",
+      mode: "individual",
+      bookable: true,
+      sync_to_db: true,
+      pdf_topic: "maquiagem",
+      pricing: { policy: "fixed", amount_brl: 250 },
+      duration_minutes: 60,
+      notes: [],
+      care_notes: [],
+    },
+  ] as any);
 });
 
 // ---------------------------------------------------------------------------
@@ -145,8 +202,8 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("sophiaTools", () => {
-  it("exports an array of 6 tool definitions", () => {
-    expect(sophiaTools).toHaveLength(6);
+  it("exports an array of 7 tool definitions", () => {
+    expect(sophiaTools).toHaveLength(7);
   });
 
   it("contains every expected tool name", () => {
@@ -158,6 +215,7 @@ describe("sophiaTools", () => {
         "save_client_data",
         "create_booking",
         "cancel_booking",
+        "send_service_pdf",
         "handoff_to_human",
       ])
     );
@@ -178,10 +236,16 @@ describe("executeTool — list_services", () => {
     const parsed = JSON.parse(result);
 
     expect(serviceService.listActive).toHaveBeenCalledOnce();
+    expect(parsed.sourcePriority).toEqual([
+      "service_reference",
+      "database",
+      "catalog_html_pdf",
+    ]);
     expect(parsed.services).toHaveLength(1);
+    expect(parsed.databaseServices).toHaveLength(1);
 
     const svc = parsed.services[0];
-    expect(svc.id).toBe("svc-1");
+    expect(svc.key).toBe("maquiagem_social");
     expect(svc.name).toBe("Maquiagem Social");
     expect(svc.price).toBe("R$ 250.00");
     expect(svc.deposit).toBe("R$ 75.00");
@@ -278,7 +342,7 @@ describe("executeTool — save_client_data", () => {
 
   it("cria cliente e vincula conversa quando todos os dados sao coletados", async () => {
     const ctx = makeCtx({
-      collectedData: { clientName: "Maria", clientCpf: "12345678901" },
+      collectedData: { clientName: "Maria Souza", clientCpf: "12345678901" },
     });
 
     const result = await executeTool(
@@ -289,7 +353,7 @@ describe("executeTool — save_client_data", () => {
 
     expect(clientService.findByPhone).toHaveBeenCalledWith("5511999990000");
     expect(clientService.create).toHaveBeenCalledWith({
-      fullName: "Maria",
+      fullName: "Maria Souza",
       phone: "5511999990000",
       cpf: "12345678901",
       email: "maria@test.com",
@@ -299,11 +363,26 @@ describe("executeTool — save_client_data", () => {
     expect(parsed.clientId).toBe("cli-1");
   });
 
+  it("nao cria cliente novo quando nome completo nao foi confirmado", async () => {
+    const ctx = makeCtx({
+      collectedData: { clientName: "Maria", clientCpf: "12345678901" },
+    });
+
+    const result = await executeTool(
+      makeToolCall("save_client_data", { email: "maria@test.com" }),
+      ctx
+    );
+    const parsed = JSON.parse(result);
+
+    expect(clientService.create).not.toHaveBeenCalled();
+    expect(parsed.message).toMatch(/nome ainda não confirmado/i);
+  });
+
   it("reutiliza cliente existente em vez de criar um novo", async () => {
     vi.mocked(clientService.findByPhone).mockResolvedValue(MOCK_CLIENT as any);
 
     const ctx = makeCtx({
-      collectedData: { clientName: "Maria", clientCpf: "12345678901" },
+      collectedData: { clientName: "Maria Souza", clientCpf: "12345678901" },
     });
 
     await executeTool(
@@ -350,6 +429,12 @@ describe("executeTool — create_booking", () => {
     expect(parsed.totalPrice).toBe("R$ 250.00");
     expect(parsed.deposit).toBe("R$ 75.00");
     expect(parsed.deadline).toBe("24 horas");
+    expect(parsed.preBookingMessage).toContain("✨ PRÉ-AGENDAMENTO");
+    expect(parsed.preBookingMessage).toContain("Chave PIX: 81999999999");
+    expect(parsed.pix).toEqual({
+      key: "81999999999",
+      holderName: "Deborah Nicolly",
+    });
   });
 
   it("retorna erro quando cliente nao esta vinculada", async () => {
@@ -487,6 +572,39 @@ describe("executeTool — handoff_to_human", () => {
 
     expect(parsed.success).toBe(true);
     expect(parsed.reason).toBe("Noiva — evento externo");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// send_service_pdf
+// ---------------------------------------------------------------------------
+
+describe("executeTool — send_service_pdf", () => {
+  it("envia catálogo PDF quando o tema é válido", async () => {
+    const result = await executeTool(
+      makeToolCall("send_service_pdf", { topic: "maquiagem" }),
+      makeCtx()
+    );
+    const parsed = JSON.parse(result);
+
+    expect(notificationService.sendWhatsAppServicePdf).toHaveBeenCalledWith(
+      "5511999990000",
+      "maquiagem",
+      "conv-1",
+      expect.any(String)
+    );
+    expect(parsed.success).toBe(true);
+  });
+
+  it("retorna erro quando o tema do PDF é inválido", async () => {
+    const result = await executeTool(
+      makeToolCall("send_service_pdf", { topic: "unhas" }),
+      makeCtx()
+    );
+    const parsed = JSON.parse(result);
+
+    expect(notificationService.sendWhatsAppServicePdf).not.toHaveBeenCalled();
+    expect(parsed.error).toMatch(/tema de pdf inválido/i);
   });
 });
 

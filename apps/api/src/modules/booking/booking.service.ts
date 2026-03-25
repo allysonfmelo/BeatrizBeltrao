@@ -116,6 +116,30 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
 
   // Send notifications
   try {
+    const paymentMethodLabel = paymentMethod
+      ? {
+          pix: "Pix",
+          credito: "Cartão de crédito",
+          debito: "Cartão de débito",
+        }[paymentMethod] ?? "Pagamento confirmado"
+      : "Pagamento confirmado";
+
+    const totalPrice = parseFloat(booking.totalPrice).toFixed(2);
+    const depositAmount = parseFloat(booking.depositAmount).toFixed(2);
+
+    await notificationService.sendWhatsAppMessage(
+      client.phone,
+      [
+        "✨ Agendamento confirmado com sucesso!",
+        `Serviço: ${service.name}`,
+        `Data: ${booking.scheduledDate}`,
+        `Horário: ${booking.scheduledTime}`,
+        `Valor total: R$ ${totalPrice}`,
+        `Sinal pago: R$ ${depositAmount}`,
+        `Forma de pagamento: ${paymentMethodLabel}`,
+      ].join("\n")
+    );
+
     await notificationService.sendBookingConfirmationEmail(client.email, {
       clientName: client.fullName,
       serviceName: service.name,

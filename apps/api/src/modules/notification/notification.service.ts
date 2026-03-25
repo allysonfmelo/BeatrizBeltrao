@@ -1,10 +1,45 @@
-import { sendTextMessage } from "../../lib/evolution.js";
+import { basename } from "node:path";
+import { readFile } from "node:fs/promises";
+import { sendTextMessage, sendDocument } from "../../lib/evolution.js";
 import { sendEmail } from "../../lib/resend.js";
 import { db } from "../../config/supabase.js";
 import { messages } from "@studio/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../config/env.js";
 import { formatBRL } from "@studio/shared/utils";
+import { getPdfCatalogPath, type CatalogTopic } from "../service/service-reference.service.js";
+
+const MAX_LINES_PER_SOPHIA_MESSAGE = 2;
+
+/**
+ * Splits Sophia replies into short chunks with max 2 lines each.
+ */
+export function splitSophiaMessage(content: string): string[] {
+  const normalized = content.trim();
+  if (!normalized) return [];
+
+  const sentenceSegments = normalized
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .flatMap((line) =>
+      line
+        .split(/(?<=[.!?])\s+/)
+        .map((segment) => segment.trim())
+        .filter(Boolean)
+    );
+
+  if (sentenceSegments.length === 0) {
+    return [normalized];
+  }
+
+  const chunks: string[] = [];
+  for (let i = 0; i < sentenceSegments.length; i += MAX_LINES_PER_SOPHIA_MESSAGE) {
+    chunks.push(sentenceSegments.slice(i, i + MAX_LINES_PER_SOPHIA_MESSAGE).join("\n"));
+  }
+
+  return chunks;
+}
 
 /**
  * Sends a WhatsApp message and logs it in the messages table.
@@ -27,6 +62,82 @@ export async function sendWhatsAppMessage(
   }
 
   logger.info("WhatsApp message sent", { phone, conversationId });
+  return evolutionMsgId;
+}
+
+/**
+ * Sends Sophia replies in short chunks and logs every outbound chunk.
+ * This is used only by the Sophia conversational flow.
+ */
+export async function sendSophiaMessage(
+  phone: string,
+  content: string,
+  conversationId?: string
+): Promise<string[]> {
+  const chunks = splitSophiaMessage(content);
+  const messageIds: string[] = [];
+
+  for (const chunk of chunks) {
+    const evolutionMsgId = await sendTextMessage(phone, chunk);
+    messageIds.push(evolutionMsgId);
+
+    if (conversationId) {
+      await db.insert(messages).values({
+        conversationId,
+        role: "sophia",
+        content: chunk,
+        messageType: "text",
+        evolutionMessageId: evolutionMsgId,
+      });
+    }
+  }
+
+  logger.info("Sophia WhatsApp response sent", {
+    phone,
+    conversationId,
+    chunks: chunks.length,
+  });
+
+  return messageIds;
+}
+
+/**
+ * Sends a service catalog PDF by topic and logs the outgoing document message.
+ */
+export async function sendWhatsAppServicePdf(
+  phone: string,
+  topic: CatalogTopic,
+  conversationId?: string,
+  caption?: string
+): Promise<string> {
+  const pdfPath = getPdfCatalogPath(topic);
+  if (!pdfPath) {
+    throw new Error(`Catálogo PDF não encontrado para o tema: ${topic}`);
+  }
+
+  const fileBuffer = await readFile(pdfPath);
+  const media = `data:application/pdf;base64,${fileBuffer.toString("base64")}`;
+  const fileName = basename(pdfPath);
+
+  const evolutionMsgId = await sendDocument(
+    phone,
+    media,
+    fileName,
+    "application/pdf",
+    caption
+  );
+
+  if (conversationId) {
+    await db.insert(messages).values({
+      conversationId,
+      role: "sophia",
+      content: caption ?? `Catálogo PDF (${topic})`,
+      messageType: "document",
+      evolutionMessageId: evolutionMsgId,
+    });
+  }
+
+  logger.info("WhatsApp PDF sent", { phone, topic, conversationId });
   return evolutionMsgId;
 }
 

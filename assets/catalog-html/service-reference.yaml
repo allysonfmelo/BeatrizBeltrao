@@ -1,0 +1,155 @@
+version: "2026.03.24"
+updated_at: "2026-03-24"
+
+policies:
+  deposit_percentage: 30
+  payment_timeout_hours: 24
+  handoff_immediate_topics:
+    - noiva
+    - externo
+  source_priority:
+    - service_reference
+    - database
+    - catalog_html_pdf
+
+pdf_catalog:
+  maquiagem:
+    title: "Catalogo Maquiagem 2026"
+    path: "assets/catalog-html/pdfs/MAQUIAGEM 2026.pdf"
+  penteado:
+    title: "Catalogo Penteado 2026"
+    path: "assets/catalog-html/pdfs/PENTEADO2026.pdf"
+  noivas:
+    title: "Catalogo Noivas 2026"
+    path: "assets/catalog-html/pdfs/Noivas 2026 Bia Beltrão .pdf"
+
+services:
+  - key: maquiagem_social
+    name: "Maquiagem Social"
+    type: maquiagem
+    category: estudio
+    mode: individual
+    bookable: true
+    sync_to_db: true
+    pdf_topic: maquiagem
+    pricing:
+      policy: fixed
+      amount_brl: 240
+    duration_minutes: 60
+    includes:
+      - "cilios inclusos"
+      - "tecnica personalizada"
+      - "material higienizado"
+      - "resistente a agua"
+    care_notes:
+      - "evitar acidos por 3 dias"
+      - "nao fazer peeling antes do atendimento"
+
+  - key: curso_automaquiagem
+    name: "Curso de Automaquiagem"
+    type: maquiagem
+    category: estudio
+    mode: individual
+    bookable: false
+    sync_to_db: false
+    pdf_topic: maquiagem
+    pricing:
+      policy: fixed
+      amount_brl: 450
+    duration_minutes: 180
+    notes:
+      - "atendimento mediante alinhamento de agenda"
+      - "pode ocorrer no studio ou externo com taxa de deslocamento"
+
+  - key: penteado_social
+    name: "Penteado Social"
+    type: penteado
+    category: estudio
+    mode: individual
+    bookable: true
+    sync_to_db: true
+    pdf_topic: penteado
+    pricing:
+      policy: fixed
+      amount_brl: 190
+    duration_minutes: 60
+    care_notes:
+      - "chegar com cabelo seco"
+      - "lavar com shampoo antes do atendimento"
+
+  - key: escova_babyliss
+    name: "Escova / Babyliss"
+    type: penteado
+    category: estudio
+    mode: individual
+    bookable: true
+    sync_to_db: true
+    pdf_topic: penteado
+    pricing:
+      policy: fixed
+      amount_brl: 120
+    duration_minutes: 45
+
+  - key: combo_maquiagem_penteado
+    name: "Combo Maquiagem + Penteado"
+    type: combo
+    category: estudio
+    mode: combinado
+    bookable: false
+    sync_to_db: false
+    pdf_topic: maquiagem
+    pricing:
+      policy: sob_consulta
+    duration_minutes: 120
+    notes:
+      - "combos oficiais sao definidos na referencia operacional"
+
+  - key: dia_da_noiva
+    name: "Dia da Noiva"
+    type: combo
+    category: externo
+    mode: combinado
+    bookable: false
+    sync_to_db: false
+    pdf_topic: noivas
+    pricing:
+      policy: fixed
+      amount_brl: 3000
+    duration_minutes: 240
+    handoff_required: true
+
+  - key: retoque_noiva
+    name: "Retoque Noiva"
+    type: maquiagem
+    category: externo
+    mode: individual
+    bookable: false
+    sync_to_db: false
+    pdf_topic: noivas
+    pricing:
+      policy: fixed
+      amount_brl: 850
+    duration_minutes: 120
+    handoff_required: true
+
+  - key: mae_da_noiva
+    name: "Mae da Noiva"
+    type: combo
+    category: externo
+    mode: combinado
+    bookable: false
+    sync_to_db: false
+    pdf_topic: noivas
+    pricing:
+      policy: fixed
+      amount_brl: 650
+    duration_minutes: 120
+    handoff_required: true
+
+faq:
+  - question: "Como funciona a reserva da data?"
+    answer: "A reserva e confirmada com pagamento de 30% do valor."
+  - question: "Qual o prazo para pagar o sinal?"
+    answer: "O prazo padrao e de 24 horas apos o pre-agendamento."
+  - question: "Atende noivas e externo?"
+    answer: "Sim, mas o atendimento e feito com handoff imediato para a Beatriz."

@@ -6,6 +6,7 @@ import {
   asaasWebhookSchema,
   evolutionWebhookSchema,
   extractTextFromWebhook,
+  extractPushNameFromWebhook,
   extractPhoneFromJid,
 } from "../validators/index.js";
 
@@ -222,6 +223,17 @@ describe("evolutionWebhookSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts pushName in payload data", () => {
+    const result = evolutionWebhookSchema.safeParse({
+      ...validEvolutionPayload,
+      data: {
+        ...validEvolutionPayload.data,
+        pushName: "Allyson Melo",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -254,6 +266,35 @@ describe("extractTextFromWebhook", () => {
   it("returns null when neither conversation nor extendedTextMessage is present", () => {
     const data = { key: baseKey };
     expect(extractTextFromWebhook(data)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractPushNameFromWebhook
+// ---------------------------------------------------------------------------
+
+describe("extractPushNameFromWebhook", () => {
+  const baseKey = {
+    remoteJid: "5511999998888@s.whatsapp.net",
+    fromMe: false,
+    id: "MSG001",
+  };
+
+  it("extracts pushName when present", () => {
+    const data = {
+      key: baseKey,
+      pushName: "Allyson Melo",
+      message: { conversation: "Olá!" },
+    };
+    expect(extractPushNameFromWebhook(data)).toBe("Allyson Melo");
+  });
+
+  it("returns null when pushName is missing", () => {
+    const data = {
+      key: baseKey,
+      message: { conversation: "Olá!" },
+    };
+    expect(extractPushNameFromWebhook(data)).toBeNull();
   });
 });
 

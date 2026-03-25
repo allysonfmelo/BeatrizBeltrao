@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { captureException } from "./sentry.js";
 
 const BASE_URLS = {
   sandbox: "https://sandbox.asaas.com/api/v3",
@@ -61,7 +62,9 @@ async function asaasRequest<T>(
   if (!response.ok) {
     const text = await response.text();
     logger.error("ASAAS API error", { method, path, status: response.status, response: text });
-    throw new Error(`ASAAS API error: ${response.status} - ${text}`);
+    const error = new Error(`ASAAS API error: ${response.status} - ${text}`);
+    captureException(error, { source: "asaas.api", method, path, status: response.status });
+    throw error;
   }
 
   return response.json() as Promise<T>;

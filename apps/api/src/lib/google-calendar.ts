@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { captureException } from "./sentry.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -28,11 +29,15 @@ async function gwsCommand(args: string[]): Promise<unknown> {
     const { stdout } = await execFileAsync("gws", args, {
       timeout: 15000,
     });
-    return JSON.parse(stdout);
+    const trimmed = stdout.trim();
+    if (!trimmed) return null;
+    return JSON.parse(trimmed);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown gws error";
     logger.error("Google Workspace CLI error", { args, error: message });
-    throw new Error(`Google Calendar error: ${message}`);
+    const wrappedError = new Error(`Google Calendar error: ${message}`);
+    captureException(wrappedError, { source: "google-calendar.gws", args });
+    throw wrappedError;
   }
 }
 
@@ -47,7 +52,7 @@ async function getBusySlots(date: string): Promise<TimeSlot[]> {
     "calendar",
     "freebusy",
     "query",
-    "--request-body",
+    "--json",
     JSON.stringify({
       timeMin,
       timeMax,
@@ -110,9 +115,11 @@ export async function createEvent(event: CalendarEventInput): Promise<string> {
     "calendar",
     "events",
     "insert",
-    "--calendar-id",
-    calendarId,
-    "--request-body",
+    "--params",
+    JSON.stringify({
+      calendarId,
+    }),
+    "--json",
     JSON.stringify({
       summary: event.title,
       description: event.description,
@@ -146,10 +153,11 @@ export async function deleteEvent(eventId: string): Promise<void> {
     "calendar",
     "events",
     "delete",
-    "--calendar-id",
-    calendarId,
-    "--event-id",
-    eventId,
+    "--params",
+    JSON.stringify({
+      calendarId,
+      eventId,
+    }),
   ]);
 
   logger.info("Calendar event deleted", { eventId });
@@ -163,10 +171,11 @@ export async function getEventLink(eventId: string): Promise<string> {
     "calendar",
     "events",
     "get",
-    "--calendar-id",
-    calendarId,
-    "--event-id",
-    eventId,
+    "--params",
+    JSON.stringify({
+      calendarId,
+      eventId,
+    }),
   ]);
 
   const data = result as { htmlLink?: string };

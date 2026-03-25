@@ -1,4 +1,27 @@
+import process from "node:process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+function loadDotEnvFile() {
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    return;
+  }
+
+  const envPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../../.env");
+
+  try {
+    process.loadEnvFile(envPath);
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+
+    if (nodeError.code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+loadDotEnvFile();
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
@@ -21,10 +44,18 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().default("contato@studiobeatrizbeltrao.com.br"),
   DEPOSIT_PERCENTAGE: z.coerce.number().default(30),
   PAYMENT_TIMEOUT_HOURS: z.coerce.number().default(24),
+  PIX_KEY: z.string().optional(),
+  PIX_HOLDER_NAME: z.string().optional(),
   MAQUIADORA_PHONE: z.string().optional(),
   MAQUIADORA_EMAIL: z.string().email().optional(),
   TRIGGER_SECRET_KEY: z.string().min(1).optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_RELEASE: z.string().optional(),
+  SENTRY_AUTH_TOKEN: z.string().optional(),
+  SENTRY_ORG: z.string().optional(),
+  SENTRY_PROJECT: z.string().optional(),
 });
 
 function loadEnv() {

@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import * as webhookService from "./webhook.service.js";
 import { logger } from "../../lib/logger.js";
+import { captureException } from "../../lib/sentry.js";
 
 /**
  * POST /api/v1/webhook/evolution — Handle incoming WhatsApp messages.
@@ -13,6 +14,7 @@ export async function handleEvolution(c: Context) {
     return c.json({ status: "received" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    captureException(error, { source: "webhook.evolution" });
     logger.error("Evolution webhook processing failed", { error: message });
     // Always return 200 to prevent retries from Evolution API
     return c.json({ status: "error", error: message });
@@ -30,6 +32,7 @@ export async function handleAsaas(c: Context) {
     return c.json({ status: "processed" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    captureException(error, { source: "webhook.asaas" });
     logger.error("ASAAS webhook processing failed", { error: message });
     return c.json({ status: "error", error: message }, 400);
   }

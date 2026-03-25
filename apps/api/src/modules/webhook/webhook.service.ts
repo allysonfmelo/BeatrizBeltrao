@@ -1,4 +1,9 @@
-import { evolutionWebhookSchema, extractTextFromWebhook, extractPhoneFromJid } from "@studio/shared/validators";
+import {
+  evolutionWebhookSchema,
+  extractTextFromWebhook,
+  extractPhoneFromJid,
+  extractPushNameFromWebhook,
+} from "@studio/shared/validators";
 import { asaasWebhookSchema } from "@studio/shared/validators";
 import { runs } from "@trigger.dev/sdk/v3";
 import { bufferWhatsappMessage } from "../../trigger/buffer-whatsapp-message.js";
@@ -50,6 +55,7 @@ export async function handleEvolutionWebhook(body: unknown): Promise<void> {
 
   // Extract text content
   const text = extractTextFromWebhook(payload.data);
+  const pushName = extractPushNameFromWebhook(payload.data);
 
   if (!text) {
     // Non-text message — send polite response
@@ -86,7 +92,7 @@ export async function handleEvolutionWebhook(body: unknown): Promise<void> {
 
   // 3. Schedule new buffer task with 15s delay
   const handle = await bufferWhatsappMessage.trigger(
-    { phone },
+    { phone, pushName: pushName ?? undefined },
     { delay: "15s" }
   );
 
@@ -108,7 +114,7 @@ export async function handleAsaasWebhook(
   webhookToken?: string
 ): Promise<void> {
   // Validate token
-  if (webhookToken && webhookToken !== env.ASAAS_WEBHOOK_TOKEN) {
+  if (!webhookToken || webhookToken !== env.ASAAS_WEBHOOK_TOKEN) {
     logger.warn("Invalid ASAAS webhook token");
     throw new Error("Invalid webhook token");
   }

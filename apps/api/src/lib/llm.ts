@@ -6,6 +6,7 @@ import type {
 } from "openai/resources/chat/completions";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { captureException } from "./sentry.js";
 
 const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -139,6 +140,7 @@ export async function sendMessage(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown LLM error";
+    captureException(error, { source: "llm.sendMessage", model: env.OPENROUTER_MODEL });
     logger.error("LLM request failed", { error: message });
     throw new Error(`LLM request failed: ${message}`);
   }

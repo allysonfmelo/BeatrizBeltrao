@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { captureException } from "./sentry.js";
 
 const resendClient = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
@@ -28,6 +29,7 @@ export async function sendEmail(
     logger.info("Email sent", { to, subject });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown email error";
+    captureException(error, { source: "resend.sendEmail", to, subject });
     logger.error("Failed to send email", { to, subject, error: message });
     throw new Error(`Email send failed: ${message}`);
   }

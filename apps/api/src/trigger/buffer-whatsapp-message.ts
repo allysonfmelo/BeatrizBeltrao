@@ -1,5 +1,4 @@
 import { task } from "@trigger.dev/sdk/v3";
-import { z } from "zod";
 import { redis, BUFFER_PREFIX } from "../config/redis.js";
 import { processWhatsappMessage } from "./process-whatsapp-message.js";
 import { logger } from "../lib/logger.js";
@@ -14,8 +13,8 @@ export const bufferWhatsappMessage = task({
   retry: {
     maxAttempts: 3,
   },
-  run: async (payload: { phone: string }) => {
-    const { phone } = payload;
+  run: async (payload: { phone: string; pushName?: string }) => {
+    const { phone, pushName } = payload;
     const bufferKey = `${BUFFER_PREFIX}${phone}`;
 
     // Fetch all buffered messages (RPUSH preserves chronological order)
@@ -42,6 +41,7 @@ export const bufferWhatsappMessage = task({
     await processWhatsappMessage.triggerAndWait({
       phone,
       combinedText,
+      pushName,
     });
 
     return {

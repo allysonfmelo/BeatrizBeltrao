@@ -15,15 +15,15 @@ export const processWhatsappMessage = task({
   retry: {
     maxAttempts: 2,
   },
-  run: async (payload: { phone: string; combinedText: string }) => {
-    const { phone, combinedText } = payload;
+  run: async (payload: { phone: string; combinedText: string; pushName?: string }) => {
+    const { phone, combinedText, pushName } = payload;
 
     logger.info("Processing WhatsApp message via Sophia", {
       phone,
       messageLength: combinedText.length,
     });
 
-    await sophiaService.processMessage(phone, combinedText);
+    await sophiaService.processMessage(phone, combinedText, { pushName });
 
     return { status: "processed", phone };
   },

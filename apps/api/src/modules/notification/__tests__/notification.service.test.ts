@@ -4,6 +4,12 @@ vi.mock("../../../lib/evolution.js");
 vi.mock("../../../lib/resend.js");
 vi.mock("../../../config/supabase.js");
 vi.mock("../../../lib/logger.js");
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn(),
+}));
+vi.mock("../../service/service-reference.service.js", () => ({
+  getPdfCatalogPath: vi.fn(),
+}));
 vi.mock("../../../config/env.js", () => ({
   env: {
     MAQUIADORA_PHONE: "5511888880000",
@@ -15,8 +21,13 @@ vi.mock("../../../config/env.js", () => ({
 import * as evolutionLib from "../../../lib/evolution.js";
 import * as resendLib from "../../../lib/resend.js";
 import * as supabaseModule from "../../../config/supabase.js";
+import { readFile } from "node:fs/promises";
+import { getPdfCatalogPath } from "../../service/service-reference.service.js";
 import {
   sendWhatsAppMessage,
+  sendSophiaMessage,
+  splitSophiaMessage,
+  sendWhatsAppServicePdf,
   sendBookingConfirmationEmail,
   notifyBookingCancelled,
   notifyMaquiadora,
@@ -60,7 +71,10 @@ describe("notification.service", () => {
     vi.clearAllMocks();
 
     vi.mocked(evolutionLib.sendTextMessage).mockResolvedValue("evo-msg-id");
+    vi.mocked(evolutionLib.sendDocument).mockResolvedValue("evo-doc-id");
     vi.mocked(resendLib.sendEmail).mockResolvedValue(undefined);
+    vi.mocked(readFile).mockResolvedValue(Buffer.from("fake-pdf"));
+    vi.mocked(getPdfCatalogPath).mockReturnValue("/tmp/catalog.pdf");
 
     const insertChain = mockInsertChain();
     mockDb.insert.mockReturnValue(insertChain);
@@ -104,6 +118,59 @@ describe("notification.service", () => {
       expect(evolutionLib.sendTextMessage).toHaveBeenCalledOnce();
       expect(mockDb.insert).not.toHaveBeenCalled();
       expect(result).toBe("evo-msg-id");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // sendSophiaMessage + chunking
+  // -------------------------------------------------------------------------
+
+  describe("sendSophiaMessage", () => {
+    it("quebra respostas longas em blocos de no máximo 2 linhas", async () => {
+      const content =
+        "Linha 1.\nLinha 2.\nLinha 3.\nLinha 4.";
+
+      const chunks = splitSophiaMessage(content);
+      expect(chunks).toEqual([
+        "Linha 1.\nLinha 2.",
+        "Linha 3.\nLinha 4.",
+      ]);
+    });
+
+    it("envia todos os chunks e persiste cada envio no histórico", async () => {
+      const ids = await sendSophiaMessage(
+        "5511999990000",
+        "Mensagem 1.\nMensagem 2.\nMensagem 3.",
+        "conv-uuid-1"
+      );
+
+      expect(ids).toEqual(["evo-msg-id", "evo-msg-id"]);
+      expect(evolutionLib.sendTextMessage).toHaveBeenCalledTimes(2);
+      expect(mockDb.insert).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // sendWhatsAppServicePdf
+  // -------------------------------------------------------------------------
+
+  describe("sendWhatsAppServicePdf", () => {
+    it("envia PDF por tema e persiste como documento", async () => {
+      const id = await sendWhatsAppServicePdf(
+        "5511999990000",
+        "maquiagem",
+        "conv-uuid-1",
+        "Segue o catálogo ✨"
+      );
+
+      expect(getPdfCatalogPath).toHaveBeenCalledWith("maquiagem");
+      expect(readFile).toHaveBeenCalledWith("/tmp/catalog.pdf");
+      expect(evolutionLib.sendDocument).toHaveBeenCalledOnce();
+      expect(id).toBe("evo-doc-id");
+
+      const insertChain = mockDb.insert.mock.results[0].value;
+      const insertValues = insertChain.values.mock.calls[0][0];
+      expect(insertValues.messageType).toBe("document");
     });
   });
 

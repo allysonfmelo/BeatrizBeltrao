@@ -15,27 +15,45 @@ vi.mock("../../../config/supabase.js");
 vi.mock("../../../lib/llm.js");
 vi.mock("../../../lib/evolution.js");
 vi.mock("../../../lib/resend.js");
-vi.mock("../../sophia/sophia.service.js");
 vi.mock("../../payment/payment.service.js");
 vi.mock("../../notification/notification.service.js");
 vi.mock("../../../lib/logger.js");
+vi.mock("@trigger.dev/sdk/v3", () => ({
+  runs: {
+    cancel: vi.fn(),
+  },
+}));
+vi.mock("../../../trigger/buffer-whatsapp-message.js", () => ({
+  bufferWhatsappMessage: {
+    trigger: vi.fn(),
+  },
+}));
+vi.mock("../../../config/redis.js", () => ({
+  BUFFER_PREFIX: "buffer:",
+  BUFFER_TTL: 300,
+  redis: {
+    rpush: vi.fn(),
+    expire: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+  },
+}));
 
-import * as sophiaService from "../../sophia/sophia.service.js";
+import { runs } from "@trigger.dev/sdk/v3";
 import * as paymentService from "../../payment/payment.service.js";
 import * as notificationService from "../../notification/notification.service.js";
+import { bufferWhatsappMessage } from "../../../trigger/buffer-whatsapp-message.js";
+import { redis } from "../../../config/redis.js";
 import {
   handleEvolutionWebhook,
   handleAsaasWebhook,
 } from "../webhook.service.js";
 
-// ---------------------------------------------------------------------------
-// Shared payloads
-// ---------------------------------------------------------------------------
-
 const validEvolutionPayload = {
   event: "messages.upsert",
   instance: "test",
   data: {
+    pushName: "Allyson Melo",
     key: {
       remoteJid: "5511999990000@s.whatsapp.net",
       fromMe: false,
@@ -56,10 +74,6 @@ const validAsaasPayload = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Setup logger mock (silent)
-// ---------------------------------------------------------------------------
-
 vi.mocked(await import("../../../lib/logger.js")).logger = {
   debug: vi.fn(),
   info: vi.fn(),
@@ -67,35 +81,57 @@ vi.mocked(await import("../../../lib/logger.js")).logger = {
   error: vi.fn(),
 };
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("webhook.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(sophiaService.processMessage).mockResolvedValue(undefined as never);
+    vi.mocked(redis.rpush).mockResolvedValue(1);
+    vi.mocked(redis.expire).mockResolvedValue(1);
+    vi.mocked(redis.get).mockResolvedValue(null);
+    vi.mocked(redis.set).mockResolvedValue("OK");
+    vi.mocked(runs.cancel).mockResolvedValue(undefined as never);
+
+    vi.mocked(bufferWhatsappMessage.trigger).mockResolvedValue({
+      id: "run-1",
+    } as never);
+
     vi.mocked(paymentService.processPaymentConfirmation).mockResolvedValue(undefined as never);
     vi.mocked(notificationService.sendWhatsAppMessage).mockResolvedValue("evo-msg-id");
   });
 
-  // -------------------------------------------------------------------------
-  // handleEvolutionWebhook
-  // -------------------------------------------------------------------------
-
   describe("handleEvolutionWebhook", () => {
-    it("processa mensagem de texto válida e chama sophiaService.processMessage com phone e texto", async () => {
+    it("bufferiza mensagem de texto e agenda trigger com 15s", async () => {
       await handleEvolutionWebhook(validEvolutionPayload);
 
-      expect(sophiaService.processMessage).toHaveBeenCalledOnce();
-      expect(sophiaService.processMessage).toHaveBeenCalledWith(
-        "5511999990000",
-        "Olá"
+      expect(redis.rpush).toHaveBeenCalledWith("buffer:5511999990000", "Olá");
+      expect(redis.expire).toHaveBeenCalledWith("buffer:5511999990000", 300);
+      expect(redis.get).toHaveBeenCalledWith("buffer-run:5511999990000");
+
+      expect(bufferWhatsappMessage.trigger).toHaveBeenCalledOnce();
+      expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
+        { phone: "5511999990000", pushName: "Allyson Melo" },
+        { delay: "15s" }
+      );
+
+      expect(redis.set).toHaveBeenCalledWith(
+        "buffer-run:5511999990000",
+        "run-1",
+        "EX",
+        300
       );
     });
 
-    it("ignora mensagem enviada por nós (fromMe: true) sem chamar sophia", async () => {
+    it("cancela run anterior quando existir para aplicar debounce", async () => {
+      vi.mocked(redis.get).mockResolvedValue("run-prev");
+
+      await handleEvolutionWebhook(validEvolutionPayload);
+
+      expect(runs.cancel).toHaveBeenCalledOnce();
+      expect(runs.cancel).toHaveBeenCalledWith("run-prev");
+      expect(bufferWhatsappMessage.trigger).toHaveBeenCalledOnce();
+    });
+
+    it("ignora mensagem enviada por nós (fromMe: true)", async () => {
       const payload = {
         ...validEvolutionPayload,
         data: {
@@ -106,11 +142,12 @@ describe("webhook.service", () => {
 
       await handleEvolutionWebhook(payload);
 
-      expect(sophiaService.processMessage).not.toHaveBeenCalled();
+      expect(redis.rpush).not.toHaveBeenCalled();
+      expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
       expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
     });
 
-    it("ignora mensagem de grupo (@g.us) sem chamar sophia", async () => {
+    it("ignora mensagem de grupo (@g.us)", async () => {
       const payload = {
         ...validEvolutionPayload,
         data: {
@@ -124,11 +161,12 @@ describe("webhook.service", () => {
 
       await handleEvolutionWebhook(payload);
 
-      expect(sophiaService.processMessage).not.toHaveBeenCalled();
+      expect(redis.rpush).not.toHaveBeenCalled();
+      expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
       expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
     });
 
-    it("envia resposta educada quando mensagem não é de texto (sem conversation nem extendedTextMessage)", async () => {
+    it("envia fallback quando mensagem não é texto", async () => {
       const payload = {
         ...validEvolutionPayload,
         data: {
@@ -140,25 +178,22 @@ describe("webhook.service", () => {
 
       await handleEvolutionWebhook(payload);
 
-      expect(sophiaService.processMessage).not.toHaveBeenCalled();
       expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledOnce();
-
-      const [phone, message] = vi.mocked(notificationService.sendWhatsAppMessage).mock.calls[0];
-      expect(phone).toBe("5511999990000");
-      expect(message).toContain("mensagens de texto");
+      expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
+      expect(redis.rpush).not.toHaveBeenCalled();
     });
 
-    it("ignora payload inválido/malformado sem lançar erro", async () => {
+    it("ignora payload inválido", async () => {
       await handleEvolutionWebhook({ foo: "bar" });
       await handleEvolutionWebhook(null);
       await handleEvolutionWebhook(undefined);
       await handleEvolutionWebhook("string-inválida");
 
-      expect(sophiaService.processMessage).not.toHaveBeenCalled();
+      expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
       expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
     });
 
-    it("ignora evento que não é messages.upsert sem chamar sophia", async () => {
+    it("ignora evento diferente de messages.upsert", async () => {
       const payload = {
         ...validEvolutionPayload,
         event: "connection.update",
@@ -166,11 +201,11 @@ describe("webhook.service", () => {
 
       await handleEvolutionWebhook(payload);
 
-      expect(sophiaService.processMessage).not.toHaveBeenCalled();
-      expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
+      expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
+      expect(redis.rpush).not.toHaveBeenCalled();
     });
 
-    it("extrai texto de extendedTextMessage quando conversation não está presente", async () => {
+    it("extrai texto de extendedTextMessage", async () => {
       const payload = {
         ...validEvolutionPayload,
         data: {
@@ -184,19 +219,16 @@ describe("webhook.service", () => {
 
       await handleEvolutionWebhook(payload);
 
-      expect(sophiaService.processMessage).toHaveBeenCalledWith(
-        "5511999990000",
+      expect(redis.rpush).toHaveBeenCalledWith(
+        "buffer:5511999990000",
         "Mensagem longa aqui"
       );
+      expect(bufferWhatsappMessage.trigger).toHaveBeenCalledOnce();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // handleAsaasWebhook
-  // -------------------------------------------------------------------------
-
   describe("handleAsaasWebhook", () => {
-    it("processa PAYMENT_CONFIRMED e chama paymentService.processPaymentConfirmation com id e billingType", async () => {
+    it("processa PAYMENT_CONFIRMED e chama paymentService com id e billingType", async () => {
       await handleAsaasWebhook(validAsaasPayload, "test-token");
 
       expect(paymentService.processPaymentConfirmation).toHaveBeenCalledOnce();
@@ -206,7 +238,7 @@ describe("webhook.service", () => {
       );
     });
 
-    it("lança erro quando o webhook token é inválido", async () => {
+    it("lança erro quando token é inválido", async () => {
       await expect(
         handleAsaasWebhook(validAsaasPayload, "token-errado")
       ).rejects.toThrow("Invalid webhook token");
@@ -214,14 +246,22 @@ describe("webhook.service", () => {
       expect(paymentService.processPaymentConfirmation).not.toHaveBeenCalled();
     });
 
-    it("ignora payload inválido (schema incorreto) sem lançar erro", async () => {
+    it("lança erro quando token não é enviado", async () => {
+      await expect(
+        handleAsaasWebhook(validAsaasPayload)
+      ).rejects.toThrow("Invalid webhook token");
+
+      expect(paymentService.processPaymentConfirmation).not.toHaveBeenCalled();
+    });
+
+    it("ignora payload inválido", async () => {
       await handleAsaasWebhook({ event: "EVENTO_DESCONHECIDO", payment: {} }, "test-token");
       await handleAsaasWebhook({ foo: "bar" }, "test-token");
 
       expect(paymentService.processPaymentConfirmation).not.toHaveBeenCalled();
     });
 
-    it("processa PAYMENT_RECEIVED e chama paymentService.processPaymentConfirmation", async () => {
+    it("processa PAYMENT_RECEIVED", async () => {
       const payload = { ...validAsaasPayload, event: "PAYMENT_RECEIVED" };
 
       await handleAsaasWebhook(payload, "test-token");
@@ -233,13 +273,7 @@ describe("webhook.service", () => {
       );
     });
 
-    it("aceita webhook sem token quando nenhum token é fornecido", async () => {
-      await handleAsaasWebhook(validAsaasPayload);
-
-      expect(paymentService.processPaymentConfirmation).toHaveBeenCalledOnce();
-    });
-
-    it("não lança erro para eventos PAYMENT_OVERDUE e PAYMENT_DELETED (apenas loga)", async () => {
+    it("não lança erro para PAYMENT_OVERDUE e PAYMENT_DELETED", async () => {
       const overduePayload = { ...validAsaasPayload, event: "PAYMENT_OVERDUE" };
       const deletedPayload = { ...validAsaasPayload, event: "PAYMENT_DELETED" };
 

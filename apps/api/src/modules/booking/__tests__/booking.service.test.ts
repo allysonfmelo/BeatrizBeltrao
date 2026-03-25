@@ -287,6 +287,12 @@ describe("booking.service", () => {
         })
       );
 
+      expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledOnce();
+      expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledWith(
+        "5511999990000",
+        expect.stringContaining("Agendamento confirmado")
+      );
+
       expect(notificationService.sendBookingConfirmationEmail).toHaveBeenCalledOnce();
       expect(notificationService.sendBookingConfirmationEmail).toHaveBeenCalledWith(
         "ana@email.com",

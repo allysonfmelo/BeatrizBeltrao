@@ -69,11 +69,16 @@ vi.mock("../sophia.tools.js", () => ({
   executeTool: vi.fn(),
 }));
 
+vi.mock("../../client/client.service.js", () => ({
+  findByPhone: vi.fn(),
+}));
+
 // notification.service.js imports external clients at load time.
 vi.mock("../../notification/notification.service.js", () => ({
-  sendWhatsAppMessage: vi.fn(),
-  sendEmail: vi.fn(),
+  sendSophiaMessage: vi.fn(),
   notifyMaquiadora: vi.fn(),
+  sendEmail: vi.fn(),
+  sendWhatsAppMessage: vi.fn(),
 }));
 
 // sophia.prompt.js has no side-effecting imports.
@@ -97,6 +102,7 @@ vi.mock("../../../lib/logger.js", () => ({
 import { processMessage } from "../sophia.service.js";
 import * as sophiaContext from "../sophia.context.js";
 import * as notificationService from "../../notification/notification.service.js";
+import * as clientService from "../../client/client.service.js";
 import { sendMessage } from "../../../lib/llm.js";
 import { buildSystemPrompt } from "../sophia.prompt.js";
 import { executeTool, sophiaTools } from "../sophia.tools.js";
@@ -144,7 +150,13 @@ describe("sophia.service — processMessage", () => {
     vi.mocked(sophiaContext.loadContext).mockResolvedValue({ ...baseContext } as never);
     vi.mocked(sophiaContext.setHandoff).mockResolvedValue(undefined);
     vi.mocked(buildSystemPrompt).mockReturnValue("system prompt");
-    vi.mocked(notificationService.sendWhatsAppMessage).mockResolvedValue("msg-id" as never);
+    vi.mocked(notificationService.sendSophiaMessage).mockResolvedValue(["msg-id"] as never);
+    vi.mocked(notificationService.notifyMaquiadora).mockResolvedValue(undefined);
+    vi.mocked(clientService.findByPhone).mockResolvedValue({
+      id: "cli-1",
+      fullName: "Maria Souza",
+      phone: PHONE,
+    } as never);
   });
 
   // -------------------------------------------------------------------------
@@ -177,19 +189,19 @@ describe("sophia.service — processMessage", () => {
       sophiaTools
     );
 
-    // Must persist Sophia's reply before dispatching
-    expect(vi.mocked(sophiaContext.saveMessage)).toHaveBeenCalledWith(
-      CONVERSATION_ID,
-      "sophia",
-      "Olá! Posso te ajudar a agendar um serviço. ✨"
-    );
-
     // Must dispatch the reply via WhatsApp
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).toHaveBeenCalledOnce();
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).toHaveBeenCalledWith(
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledOnce();
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
       PHONE,
       "Olá! Posso te ajudar a agendar um serviço. ✨",
       CONVERSATION_ID
+    );
+
+    expect(vi.mocked(buildSystemPrompt)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientName: "Maria",
+        serviceReferenceSummary: expect.any(String),
+      })
     );
 
     // Must NOT trigger handoff on a clean text response
@@ -248,8 +260,8 @@ describe("sophia.service — processMessage", () => {
     );
 
     // Final answer must be sent via WhatsApp
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).toHaveBeenCalledOnce();
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).toHaveBeenCalledWith(
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledOnce();
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
       PHONE,
       "Aqui estão os nossos serviços!",
       CONVERSATION_ID
@@ -271,7 +283,7 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(sophiaContext.saveMessage)).not.toHaveBeenCalled();
     expect(vi.mocked(sophiaContext.loadContext)).not.toHaveBeenCalled();
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).not.toHaveBeenCalled();
+    expect(vi.mocked(notificationService.sendSophiaMessage)).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -303,15 +315,8 @@ describe("sophia.service — processMessage", () => {
     const fallback =
       "Desculpe, estou com uma dificuldade técnica no momento. Vou chamar a Beatriz para te ajudar! ✨";
 
-    // Fallback must be saved to conversation history
-    expect(vi.mocked(sophiaContext.saveMessage)).toHaveBeenCalledWith(
-      CONVERSATION_ID,
-      "sophia",
-      fallback
-    );
-
     // Fallback must be dispatched via WhatsApp
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).toHaveBeenCalledWith(
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
       PHONE,
       fallback,
       CONVERSATION_ID
@@ -339,16 +344,62 @@ describe("sophia.service — processMessage", () => {
     // LLM must still have been called once
     expect(vi.mocked(sendMessage)).toHaveBeenCalledOnce();
 
-    // Sophia must NOT persist an empty message
-    const sophiaSaveCalls = vi.mocked(sophiaContext.saveMessage).mock.calls.filter(
-      ([, role]) => role === "sophia"
-    );
-    expect(sophiaSaveCalls).toHaveLength(0);
-
     // WhatsApp must NOT be called when there is no content to send
-    expect(vi.mocked(notificationService.sendWhatsAppMessage)).not.toHaveBeenCalled();
+    expect(vi.mocked(notificationService.sendSophiaMessage)).not.toHaveBeenCalled();
 
     // Handoff must NOT be triggered by an empty response
     expect(vi.mocked(sophiaContext.setHandoff)).not.toHaveBeenCalled();
+  });
+
+  it("asks for the client name when neither DB nor pushName provide a valid name", async () => {
+    vi.mocked(clientService.findByPhone).mockResolvedValueOnce(null);
+
+    await processMessage(PHONE, "Oi");
+
+    expect(vi.mocked(sophiaContext.updateCollectedData)).toHaveBeenCalledWith(
+      CONVERSATION_ID,
+      { awaitingName: true }
+    );
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
+      PHONE,
+      expect.stringMatching(/Qual seu nome/i),
+      CONVERSATION_ID
+    );
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
+  });
+
+  it("sends triage question on first ambiguous message when name exists", async () => {
+    vi.mocked(clientService.findByPhone).mockResolvedValueOnce(null);
+
+    const contextWithFirstMessage = {
+      ...baseContext,
+      messageHistory: [{ role: "user", content: "Oi" }],
+    };
+    vi.mocked(sophiaContext.loadContext).mockResolvedValueOnce(contextWithFirstMessage as never);
+
+    await processMessage(PHONE, "Oi", { pushName: "Ana Clara" });
+
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
+      PHONE,
+      "Oi, Ana! ✨\nComo posso te ajudar hoje?",
+      CONVERSATION_ID
+    );
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
+  });
+
+  it("does immediate handoff for noiva/externo messages", async () => {
+    await processMessage(PHONE, "Quero orçamento para noiva");
+
+    expect(vi.mocked(sophiaContext.setHandoff)).toHaveBeenCalledWith(
+      CONVERSATION_ID,
+      "Solicitação de noiva/serviço externo"
+    );
+    expect(vi.mocked(notificationService.notifyMaquiadora)).toHaveBeenCalledOnce();
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
+      PHONE,
+      expect.stringMatching(/conectar com a Beatriz/i),
+      CONVERSATION_ID
+    );
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
   });
 });
