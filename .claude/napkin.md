@@ -77,3 +77,12 @@
 - 2026-03-24 (self): regex de validação de nome via `pushName` deve remover caracteres não-letras (emoji/símbolos) e exigir padrão `letras+espaços` com tamanho mínimo para não tratar payload inválido como nome.
 - 2026-03-24 (self): `service-reference.yaml` precisa ser a fonte prioritária também no retorno de `list_services` (não apenas no prompt), para manter consistência de regras/preço/FAQ quando DB estiver vazio ou desatualizado.
 - 2026-03-24 (self): para manter compliance da regra "nome do payload não persiste sem confirmação", `save_client_data` deve exigir nome completo válido antes de criar cliente novo no banco.
+
+## Session 2026-03-25 — Sophia Rules & Triage
+
+- Preferência do usuário sobre comportamento da Sophia:
+  - MÁXIMO de 3 mensagens subsequentes enviadas em sequência.
+  - Evitar envio direto de valores/preços já na primeira interação.
+  - Fazer **triagem inicial** (entender o que a cliente busca) antes de despejar a lista de serviços.
+  - Sempre ofertar PRIMEIRO o PDF informativo do tema desejado, e só informar valores extras se a cliente recusar ou pedir diretamente.
+  - Tudo documentado na sessão `## REGRAS DE CONVERSA E TRIAGEM` de `sophia.prompt.ts`.
