@@ -5,6 +5,7 @@ import { webhookRoutes } from "./modules/webhook/webhook.routes.js";
 import { bookingRoutes } from "./modules/booking/booking.routes.js";
 import { serviceRoutes } from "./modules/service/service.routes.js";
 import { clientRoutes } from "./modules/client/client.routes.js";
+import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { env } from "./config/env.js";
 import { logger as appLogger } from "./lib/logger.js";
 import { captureException } from "./lib/sentry.js";
@@ -44,5 +45,6 @@ api.route("/webhook", webhookRoutes);
 api.route("/bookings", bookingRoutes);
 api.route("/services", serviceRoutes);
 api.route("/clients", clientRoutes);
+api.route("/dashboard", dashboardRoutes);
 
 app.route("/api/v1", api);

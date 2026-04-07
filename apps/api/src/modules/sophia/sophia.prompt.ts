@@ -36,9 +36,18 @@ export function buildSystemPrompt(context: {
   const serviceList = context.services
     .map(
       (s) =>
-        `- ${s.name} (${s.type}/${s.category}): R$ ${parseFloat(s.price).toFixed(2)} — ${s.durationMinutes} min`
+        `- ${s.name} (${s.type}/${s.category}): R$ ${parseFloat(s.price).toFixed(2)} — ${s.durationMinutes} min — ID: ${s.id}`
     )
     .join("\n");
+
+  const serviceIdMap = context.services
+    .map((s) => `- ${s.name}: ${s.id}`)
+    .join("\n");
+
+  const now = new Date();
+  const todayISO = now.toISOString().split("T")[0];
+  const weekdays = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+  const todayWeekday = weekdays[now.getDay()];
 
   const collectedSummary = Object.entries(context.collectedData)
     .filter(([, v]) => v !== undefined && v !== null)
@@ -82,6 +91,17 @@ Use esta ordem de prioridade para responder:
 3. Catálogo HTML/PDF (apenas complemento)
 
 ${context.serviceReferenceSummary}
+
+## DATA E HORÁRIOS
+- Data de hoje: ${todayISO} (${todayWeekday})
+- Horário comercial: 05:00 às 22:00 (horário de Brasília)
+- Não atendemos aos domingos
+- Use SEMPRE o formato YYYY-MM-DD para datas nas ferramentas
+- Use SEMPRE o ano correto baseado na data de hoje
+
+## IDs DOS SERVIÇOS (USE ESTES IDs NAS FERRAMENTAS)
+${serviceIdMap}
+⚠️ IMPORTANTE: Nas ferramentas check_availability e create_booking, passe SEMPRE o UUID acima. NUNCA passe o nome do serviço como ID.
 
 ## SERVIÇOS DO BANCO (SUPORTE OPERACIONAL)
 ${serviceList}

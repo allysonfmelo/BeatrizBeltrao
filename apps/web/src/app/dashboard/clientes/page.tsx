@@ -50,7 +50,12 @@ export default async function ClientsDashboardPage({
             e-mail e acesso rapido ao historico individual de agendamentos.
           </p>
         </div>
-        <span className="pill">Pagina {result.meta.page}</span>
+        <div className="stack-16" style={{ textAlign: "right" }}>
+          <a href="/dashboard/analytics" className="btn btn-secondary">
+            Analytics
+          </a>
+          <span className="pill" style={{ marginLeft: 8 }}>Pagina {result.meta.page}</span>
+        </div>
       </header>
 
       <ClientSearchForm initialSearch={search} />

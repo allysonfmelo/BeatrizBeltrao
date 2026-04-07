@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Bia Beltrão — Beauty Studio</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+    <!-- Google Fonts — Fallback serif -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+    <!-- Wix Madefor Fonts -->
+    <style>
+        @font-face { font-family: 'Madefor Display'; src: url("Wix/assets/madefor-display-bold_2efb43704c07.woff2") format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Display'; src: url("Wix/assets/madefor-display-extrabold_9c1add199596.woff2") format('woff2'); font-weight: 800; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Display'; src: url("Wix/assets/madefor-display_cb7b369b5b19.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Text'; src: url("Wix/assets/madefor-text_d2c633af5292.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Text'; src: url("Wix/assets/madefor-text-bold_d7ecf2f8ff3d.woff2") format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Text'; src: url("Wix/assets/madefor-text-mediumbold_3224a5f66b54.woff2") format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Madefor Text'; src: url("Wix/assets/madefor-text-extrabold_9c4cb67b7b37.woff2") format('woff2'); font-weight: 800; font-style: normal; font-display: swap; }
+    </style>
+
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    brand: {
+                        50: '#FFF9FE', 100: '#FFE8E0', 200: '#F2E6DE', 300: '#E8D5CA',
+                        400: '#E8C4B8', 500: '#D4A574', 600: '#C9A88D', 700: '#B8956E',
+                        800: '#A67C52', 900: '#170100',
+                    },
+                    surface: { 50: '#EAEAE5', 100: '#ededec', 200: '#E2DBD4', 300: '#D1C9C1' },
+                    dark: { 50: '#514f4c', 100: '#3A3A3A', 200: '#262221', 300: '#1a0000', 400: '#11190C' },
+                },
+                fontFamily: {
+                    display: ['"Madefor Display"', '"Cormorant Garamond"', 'Georgia', 'serif'],
+                    body: ['"Madefor Text"', 'Inter', 'system-ui', 'sans-serif'],
+                    serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+                    sans: ['"Madefor Text"', 'Inter', 'system-ui', 'sans-serif'],
+                },
+            }
+        }
+    }
+    </script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Madefor Text', 'Inter', sans-serif;
+            background-color: #EAEAE5;
+            color: #1C1C1C;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* ═══ GLASSMORPHISM ═══ */
+        .glass {
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+        }
+        .glass-subtle {
+            backdrop-filter: blur(24px) saturate(1.3);
+            -webkit-backdrop-filter: blur(24px) saturate(1.3);
+            background: rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+        }
+        .glass-dark {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(23, 1, 0, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* ═══ GLASS BUTTONS ═══ */
+        .btn-glass-primary {
+            position: relative; display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.625rem; padding: 1rem 2.25rem;
+            font-family: 'Madefor Text', 'Inter', sans-serif;
+            font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; text-decoration: none; color: #fff;
+            background: radial-gradient(circle at 10% 0%, #3d2015 0%, #170100 100%);
+            border: 1px solid rgba(23, 1, 0, 0.9);
+            border-radius: 100px; cursor: pointer; overflow: hidden;
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow:
+                0 15px 25px -10px rgba(23, 1, 0, 0.5),
+                inset 0 4px 8px rgba(80, 50, 30, 0.6),
+                inset 0 -4px 8px rgba(23, 1, 0, 0.7);
+        }
+        .btn-glass-primary:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 20px 35px -10px rgba(23, 1, 0, 0.6),
+                0 8px 16px rgba(212, 165, 116, 0.15),
+                inset 0 4px 8px rgba(80, 50, 30, 0.7),
+                inset 0 -4px 8px rgba(23, 1, 0, 0.8);
+            background: radial-gradient(circle at 10% 0%, #4a2a1a 0%, #170100 100%);
+        }
+        .btn-glass-primary:active { transform: translateY(0); }
+        .btn-glass-primary svg, .btn-glass-primary iconify-icon {
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .btn-glass-primary:hover svg, .btn-glass-primary:hover iconify-icon {
+            transform: translateX(3px);
+        }
+
+        .btn-glass-secondary {
+            position: relative; display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.625rem; padding: 1rem 2.25rem;
+            font-family: 'Madefor Text', 'Inter', sans-serif;
+            font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; text-decoration: none; color: #170100;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 165, 116, 0.3); border-radius: 100px;
+            cursor: pointer; overflow: hidden;
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow:
+                0 10px 20px -8px rgba(212, 165, 116, 0.25),
+                inset 0 2px 6px rgba(255, 255, 255, 0.5),
+                inset 0 -2px 6px rgba(212, 165, 116, 0.15);
+        }
+        .btn-glass-secondary:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.6); border-color: rgba(212, 165, 116, 0.5);
+            box-shadow:
+                0 16px 30px -8px rgba(212, 165, 116, 0.35),
+                0 6px 12px rgba(212, 165, 116, 0.1),
+                inset 0 2px 6px rgba(255, 255, 255, 0.6),
+                inset 0 -2px 6px rgba(212, 165, 116, 0.2);
+        }
+        .btn-glass-secondary:active { transform: translateY(0); }
+        .btn-glass-secondary svg, .btn-glass-secondary iconify-icon {
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .btn-glass-secondary:hover svg, .btn-glass-secondary:hover iconify-icon {
+            transform: translateX(4px);
+        }
+
+        /* ═══ GRADIENT TEXT ═══ */
+        .text-gradient-brand {
+            background: linear-gradient(180deg, #E8C4B8 0%, #D4A574 60%, #A67C52 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* ═══ REVEAL ANIMATIONS ═══ */
+        .reveal { opacity: 0; transform: translateY(2rem); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .reveal-left { opacity: 0; transform: translateX(-2.5rem); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal-left.active { opacity: 1; transform: translateX(0); }
+        .reveal-scale { opacity: 0; transform: scale(0.92); transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal-scale.active { opacity: 1; transform: scale(1); }
+        .reveal-fade { opacity: 0; transition: opacity 1.2s ease; }
+        .reveal-fade.active { opacity: 1; }
+
+        /* Masked Text Reveal */
+        .text-reveal-wrap { overflow: hidden; display: block; }
+        .text-reveal-inner {
+            display: block; transform: translateY(105%);
+            transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .text-revealed .text-reveal-inner { transform: translateY(0); }
+
+        /* Stagger Delays */
+        .delay-100 { transition-delay: 0.1s; } .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; } .delay-400 { transition-delay: 0.4s; }
+        .delay-500 { transition-delay: 0.5s; } .delay-600 { transition-delay: 0.6s; }
+        .delay-700 { transition-delay: 0.7s; } .delay-800 { transition-delay: 0.8s; }
+        .delay-900 { transition-delay: 0.9s; } .delay-1000 { transition-delay: 1.0s; }
+
+        /* ═══ NAV ═══ */
+        .nav-load { opacity: 0; transform: translateY(-14px); transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-load.loaded { opacity: 1; transform: translateY(0); }
+
+        .nav-dropdown {
+            position: absolute; top: calc(100% + 10px); left: 50%;
+            transform: translateX(-50%) translateY(8px); min-width: 220px; padding: 10px;
+            backdrop-filter: blur(28px) saturate(1.4); -webkit-backdrop-filter: blur(28px) saturate(1.4);
+            background: rgba(255, 255, 255, 0.45); border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 18px;
+            box-shadow: 0 2.8px 2.2px rgba(0,0,0,0.02), 0 6.7px 5.3px rgba(0,0,0,0.028),
+                        0 12.5px 10px rgba(0,0,0,0.035), 0 22.3px 17.9px rgba(0,0,0,0.042),
+                        0 41.8px 33.4px rgba(0,0,0,0.05), 0 100px 80px rgba(0,0,0,0.07);
+            opacity: 0; pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .nav-item:hover .nav-dropdown { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+        .nav-dropdown a {
+            display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-radius: 12px;
+            font-family: 'Madefor Text', 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+            color: #170100; text-decoration: none; transition: all 0.25s ease;
+        }
+        .nav-dropdown a:hover { background: rgba(232, 196, 184, 0.2); }
+        .nav-dropdown a::before {
+            content: ''; display: block; width: 5px; height: 5px; border-radius: 50%;
+            background: rgba(212, 165, 116, 0.4); flex-shrink: 0; transition: background 0.25s ease;
+        }
+        .nav-dropdown a:hover::before { background: rgba(212, 165, 116, 0.8); }
+        .nav-dropdown::before {
+            content: ''; position: absolute; top: -6px; left: 50%;
+            transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px;
+            background: rgba(255, 255, 255, 0.45);
+            border-top: 1px solid rgba(255, 255, 255, 0.55);
+            border-left: 1px solid rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(28px);
+        }
+
+        /* ═══ MARQUEE ═══ */
+        .marquee-container { display: flex; overflow: hidden; user-select: none; }
+        .marquee-content {
+            flex-shrink: 0; display: flex; align-items: center;
+            min-width: 100%; animation: marquee-scroll 40s linear infinite;
+        }
+        @keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+        /* ═══ GRADIENT PILL ═══ */
+        .gradient-pill {
+            position: relative; display: inline-block; padding: 2px;
+            border-radius: 500px; background: rgba(212,165,116,0.2); overflow: hidden;
+        }
+        .gradient-pill::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, #E2DBD4, #D4A574 25%, #E8C4B8 50%, #D4A574 75%, #E2DBD4);
+            background-size: 300% 100%; border-radius: inherit; opacity: 0;
+            animation: pillPulse 4s ease infinite;
+        }
+        @keyframes pillPulse {
+            0% { background-position: 100% 0; opacity: 0; }
+            5% { opacity: 1; } 20% { background-position: -100% 0; opacity: 1; }
+            25% { opacity: 0; } 100% { opacity: 0; }
+        }
+        .gradient-pill-inner {
+            position: relative; z-index: 1;
+            background: rgba(232, 196, 184, 0.25); backdrop-filter: blur(8px);
+            border-radius: 500px; padding: 6px 18px;
+            font-size: 11px; font-weight: 600; letter-spacing: 0.15em;
+            text-transform: uppercase; color: #170100;
+        }
+
+        /* ═══ BACKGROUND ANIMATIONS ═══ */
+        @keyframes float { 0%,100%{transform:translateY(0) rotate(0)} 33%{transform:translateY(-12px) rotate(2deg)} 66%{transform:translateY(6px) rotate(-1deg)} }
+        @keyframes float-slow { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.04)} }
+        @keyframes glow-pulse { 0%,100%{opacity:.25;transform:scale(1)} 50%{opacity:.5;transform:scale(1.08)} }
+        @keyframes spin-slow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+        .anim-float { animation: float 6s ease-in-out infinite; }
+        .anim-float-slow { animation: float-slow 8s ease-in-out infinite; }
+        .anim-glow { animation: glow-pulse 4s ease-in-out infinite; }
+        .anim-spin { animation: spin-slow 25s linear infinite; }
+
+        /* ═══ CARD DIVIDER ═══ */
+        .card-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212,165,116,0.35) 20%, rgba(212,165,116,0.5) 50%, rgba(212,165,116,0.35) 80%, transparent);
+        }
+
+        /* ═══ CARD IMAGE CAROUSEL ═══ */
+        .card-carousel-img {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .card-carousel-img.active { opacity: 1; }
+
+        /* ═══ ZOOM LOOP (continuous Ken Burns on split-section images) ═══ */
+        @keyframes zoom-loop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+        .zoom-loop { animation: zoom-loop 10s ease-in-out infinite; }
+
+        /* ═══ 3D LIFTED IMAGE (floating above page with contact shadow) ═══ */
+        .img-3d-lift {
+            position: relative;
+        }
+        .img-3d-lift::after {
+            content: '';
+            position: absolute;
+            bottom: -18px;
+            left: 8%;
+            right: 8%;
+            height: 36px;
+            background: radial-gradient(ellipse at center, rgba(23, 1, 0, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(8px);
+            z-index: -1;
+        }
+
+        /* ═══ SECTION DIVIDER (mobile separator between sub-sections) ═══ */
+        .section-separator {
+            position: relative;
+            margin: 3rem 0;
+            text-align: center;
+        }
+        .section-separator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212,165,116,0.3) 30%, rgba(212,165,116,0.3) 70%, transparent);
+        }
+        .section-separator-label {
+            position: relative;
+            display: inline-block;
+            background: #EAEAE5;
+            padding: 0 1.25rem;
+            font-family: 'Madefor Text', 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(212, 165, 116, 0.6);
+        }
+
+        /* ═══ ENHANCED PILL — Genlabs-style (radial gradient + inset + glow) ═══ */
+        .pill-highlight {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: radial-gradient(circle at 15% 0%, #F2E6DE 0%, #E8C4B8 100%);
+            border: 1px solid rgba(212, 165, 116, 0.35);
+            border-radius: 100px;
+            padding: 12px 26px;
+            font-family: 'Madefor Display', serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: #170100;
+            letter-spacing: 0.03em;
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow:
+                0 8px 20px -6px rgba(212, 165, 116, 0.4),
+                inset 0 3px 6px rgba(255, 255, 255, 0.7),
+                inset 0 -3px 6px rgba(212, 165, 116, 0.25);
+            cursor: default;
+        }
+        .pill-highlight:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 14px 28px -6px rgba(212, 165, 116, 0.5),
+                inset 0 3px 6px rgba(255, 255, 255, 0.8),
+                inset 0 -3px 6px rgba(212, 165, 116, 0.3);
+        }
+        .pill-highlight iconify-icon {
+            color: #A67C52;
+            font-size: 18px;
+        }
+
+        /* ═══ NOIVAS IMAGE MARQUEE (continuous scroll + edge fade) ═══ */
+        .img-marquee-container {
+            position: relative;
+            display: flex; overflow: hidden; user-select: none;
+        }
+        /* Fade edges — images appear/disappear smoothly at sides */
+        .img-marquee-container::before,
+        .img-marquee-container::after {
+            content: '';
+            position: absolute; top: 0; bottom: 0; width: 120px;
+            z-index: 2; pointer-events: none;
+        }
+        .img-marquee-container::before {
+            left: 0;
+            background: linear-gradient(to right, #170100, transparent);
+        }
+        .img-marquee-container::after {
+            right: 0;
+            background: linear-gradient(to left, #211410, transparent);
+        }
+        .img-marquee-track {
+            display: flex; gap: 20px; flex-shrink: 0;
+            animation: img-marquee 50s linear infinite;
+        }
+        @keyframes img-marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .img-marquee-item {
+            flex-shrink: 0; width: 320px; height: 420px;
+            border-radius: 20px; overflow: hidden;
+            animation: img-pulse 5s ease-in-out infinite;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        @keyframes img-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+            50% { transform: scale(1.06); box-shadow: 0 16px 40px rgba(212,165,116,0.15), 0 8px 24px rgba(0,0,0,0.25); }
+        }
+        .img-marquee-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        @media (max-width: 768px) {
+            .img-marquee-item { width: 220px; height: 300px; border-radius: 16px; }
+            .img-marquee-track { gap: 14px; }
+            .img-marquee-container::before,
+            .img-marquee-container::after { width: 60px; }
+        }
+
+        /* ═══ PENTEADO CAROUSEL CARDS ═══ */
+        .penteado-card {
+            position: relative; border-radius: 24px; overflow: hidden;
+            background: linear-gradient(180deg, #F2E6DE 0%, #E8D5CA 100%);
+            transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                        box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .penteado-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.06);
+        }
+        .penteado-card .card-carousel-img {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            transition: opacity 1.8s ease-in-out;
+        }
+        .penteado-card .card-carousel-img.active { opacity: 1; }
+        .penteado-scroll {
+            display: flex; gap: 16px;
+            overflow-x: auto; scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; -ms-overflow-style: none;
+            padding-bottom: 8px;
+        }
+        .penteado-scroll::-webkit-scrollbar { display: none; }
+        .penteado-scroll-item {
+            flex-shrink: 0; width: 85vw; max-width: 400px;
+            scroll-snap-align: center;
+        }
+        @media (min-width: 768px) {
+            .penteado-scroll { overflow: visible; }
+            .penteado-scroll-item { width: auto; flex: 1; }
+        }
+
+        /* ═══ NOIVAS PILL (high contrast on dark) ═══ */
+        .pill-noivas {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 100px; padding: 10px 22px;
+            font-family: 'Madefor Display', serif;
+            font-size: 14px; font-weight: 700;
+            color: #fff; letter-spacing: 0.03em;
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .pill-noivas iconify-icon { color: #E8C4B8; font-size: 16px; }
+        .pill-noivas:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
+        }
+
+        /* ═══ ICON FIX ═══ */
+        iconify-icon { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+
+        /* ═══ MOBILE MENU OVERLAY ═══ */
+        .mobile-menu {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(234, 234, 229, 0.92);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .mobile-menu.open { opacity: 1; pointer-events: auto; }
+        .mobile-menu a {
+            font-family: 'Madefor Display', serif; font-size: 28px; font-weight: 700;
+            color: #170100; text-decoration: none; letter-spacing: -0.02em;
+            transition: color 0.3s ease;
+        }
+        .mobile-menu a:hover { color: #D4A574; }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen selection:bg-brand-500/30 selection:text-brand-900">
+
+    <!-- ═══════════════════════════════════════════════════════
+         NAVIGATION
+    ═══════════════════════════════════════════════════════ -->
+    <header class="fixed top-0 left-0 right-0 z-[100] nav-load">
+        <div class="max-w-[1400px] mx-auto px-4 md:px-8">
+            <nav class="mt-4 md:mt-5 rounded-[20px] glass px-5 md:px-7 py-3.5 md:py-4 flex justify-between items-center shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+                <!-- Logo -->
+                <a href="#" class="font-display text-xl md:text-2xl font-bold tracking-tight text-dark-300 hover:opacity-70 transition-opacity">BIA</a>
+
+                <!-- Nav Links (Desktop) -->
+                <div class="hidden md:flex items-center gap-1">
+                    <a class="px-4 py-2 text-[11px] font-body font-semibold tracking-[0.14em] uppercase text-dark-300/80 hover:text-dark-300 hover:bg-white/40 rounded-xl transition-all duration-300" href="#hero">Inicio</a>
+
+                    <div class="nav-item relative">
+                        <a class="px-4 py-2 text-[11px] font-body font-semibold tracking-[0.14em] uppercase text-dark-300/80 hover:text-dark-300 hover:bg-white/40 rounded-xl transition-all duration-300 flex items-center gap-1 cursor-pointer" href="#servicos">
+                            Maquiagem
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-[10px] opacity-50"></iconify-icon>
+                        </a>
+                        <div class="nav-dropdown">
+                            <a href="#servicos" class="font-body">Maquiagem Social</a>
+                            <a href="#servicos" class="font-body">Automaquiagem</a>
+                            <a href="#noivas" class="font-body">Maquiagem para Noivas</a>
+                        </div>
+                    </div>
+
+                    <a class="px-4 py-2 text-[11px] font-body font-semibold tracking-[0.14em] uppercase text-dark-300/80 hover:text-dark-300 hover:bg-white/40 rounded-xl transition-all duration-300" href="#noivas">Noivas</a>
+                    <a class="px-4 py-2 text-[11px] font-body font-semibold tracking-[0.14em] uppercase text-dark-300/80 hover:text-dark-300 hover:bg-white/40 rounded-xl transition-all duration-300" href="#penteados">Penteados</a>
+                    <a class="px-4 py-2 text-[11px] font-body font-semibold tracking-[0.14em] uppercase text-dark-300/80 hover:text-dark-300 hover:bg-white/40 rounded-xl transition-all duration-300" href="#cta">Contato</a>
+                </div>
+
+                <!-- Right: CTA + Mobile hamburger -->
+                <div class="flex items-center gap-3">
+                    <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20hor%C3%A1rio%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !py-2.5 !px-5 md:!px-6 !text-[10px] !tracking-[0.14em] !rounded-xl !shadow-[0_4px_16px_rgba(23,1,0,0.12)]">
+                        Agendar
+                    </a>
+                    <button class="md:hidden w-9 h-9 rounded-full glass flex items-center justify-center" id="menuToggle" aria-label="Menu">
+                        <iconify-icon class="text-dark-300 text-lg" icon="solar:hamburger-menu-linear" id="menuIcon"></iconify-icon>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobileMenu">
+        <button class="absolute top-6 right-6 w-10 h-10 rounded-full glass flex items-center justify-center" id="menuClose">
+            <iconify-icon class="text-dark-300 text-xl" icon="solar:close-circle-linear"></iconify-icon>
+        </button>
+        <a href="#hero" onclick="closeMobileMenu()">Inicio</a>
+        <a href="#servicos" onclick="closeMobileMenu()">Maquiagem</a>
+        <a href="#noivas" onclick="closeMobileMenu()">Noivas</a>
+        <a href="#penteados" onclick="closeMobileMenu()">Penteados</a>
+        <a href="#cta" onclick="closeMobileMenu()">Contato</a>
+        <div class="mt-4">
+            <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20hor%C3%A1rio%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary" onclick="closeMobileMenu()">Agendar</a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         HERO — First Fold
+    ═══════════════════════════════════════════════════════ -->
+    <section id="hero" class="relative min-h-screen overflow-hidden">
+
+        <!-- Background layers -->
+        <div class="absolute inset-0">
+            <!-- Warm gradient overlay (left side — reduced for image clarity) -->
+            <div class="absolute inset-0 bg-gradient-to-r from-brand-400/30 via-brand-300/15 to-transparent z-[1]"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-brand-200/10 via-transparent to-surface-50/60 z-[1]"></div>
+
+            <!-- Animated blobs -->
+            <div class="absolute top-[15%] left-[8%] w-[350px] md:w-[500px] h-[350px] md:h-[500px] rounded-full bg-brand-400/[0.08] blur-[100px] anim-float-slow z-0"></div>
+            <div class="absolute bottom-[10%] left-[25%] w-[200px] md:w-[250px] h-[200px] md:h-[250px] rounded-full bg-brand-200/10 blur-[70px] anim-glow z-0" style="animation-delay:-2s"></div>
+
+            <!-- Geometric accents -->
+            <div class="hidden md:block absolute top-[28%] left-[42%] w-14 h-14 border border-brand-500/[0.08] rounded-full anim-spin z-0"></div>
+            <div class="hidden md:block absolute bottom-[35%] left-[15%] w-6 h-6 bg-brand-500/10 rounded-full anim-glow" style="animation-delay:-3s"></div>
+
+            <!-- Hero image (Desktop — right side) -->
+            <div class="absolute top-0 right-0 w-[55%] h-full z-0 hidden md:block">
+                <img src="fotos/IMG_6466.JPG" alt="Bia Beltrão — Maquiadora profissional" class="w-full h-full object-cover object-top"/>
+                <!-- Fade-out gradient from left edge into warm bg (reduced for more image clarity) -->
+                <div class="absolute inset-y-0 left-0 w-[40%] bg-gradient-to-r from-[#EAEAE5] via-[#EAEAE5]/50 to-transparent"></div>
+                <!-- Top fade for nav (lighter) -->
+                <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[#EAEAE5]/40 to-transparent"></div>
+                <!-- Bottom fade (lighter) -->
+                <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#EAEAE5]/90 to-transparent"></div>
+            </div>
+
+            <!-- Mobile image (full width behind text) -->
+            <div class="absolute inset-0 md:hidden z-0">
+                <img src="fotos/IMG_6466.JPG" alt="Bia Beltrão" class="w-full h-full object-cover object-top opacity-30"/>
+                <div class="absolute inset-0 bg-gradient-to-b from-brand-400/40 via-surface-50/50 to-surface-50"></div>
+            </div>
+        </div>
+
+        <!-- Hero Content -->
+        <div class="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12 pt-32 md:pt-44 pb-24 min-h-screen flex flex-col justify-center">
+            <div class="max-w-[560px]">
+
+                <!-- Animated gradient pill label -->
+                <div class="mb-6 md:mb-8 reveal-left delay-200 hero-el">
+                    <div class="gradient-pill">
+                        <span class="gradient-pill-inner">Beleza Refinada & Atemporal</span>
+                    </div>
+                </div>
+
+                <!-- Main Headline -->
+                <h1 class="mb-6 md:mb-8 leading-[1.05] tracking-[-0.02em]" id="hero-title">
+                    <span class="text-reveal-wrap">
+                        <span class="text-reveal-inner delay-300 text-[clamp(2.75rem,6vw,5rem)] font-display font-bold text-dark-300">
+                            Sua assinatura
+                        </span>
+                    </span>
+                    <span class="text-reveal-wrap">
+                        <span class="text-reveal-inner delay-400 text-[clamp(2.75rem,6vw,5rem)] font-display font-bold text-dark-300">
+                            de beleza <em class="font-serif italic font-semibold text-brand-700">&amp;</em>
+                        </span>
+                    </span>
+                    <span class="text-reveal-wrap">
+                        <span class="text-reveal-inner delay-500 text-[clamp(2.75rem,6vw,5rem)] font-serif italic font-semibold text-brand-700">
+                            sofisticação.
+                        </span>
+                    </span>
+                </h1>
+
+                <!-- Body text -->
+                <div class="reveal-left delay-600 hero-el">
+                    <p class="text-base md:text-lg leading-[1.7] text-dark-50 max-w-[480px] mb-8 md:mb-10">
+                        Estúdio especializado em beleza. Maquiagem social,
+                        automaquiagem, penteados com Kelly Silva e
+                        atendimento exclusivo para noivas. Uma experiência
+                        pensada para revelar a sua versão mais elegante.
+                    </p>
+                </div>
+
+                <!-- CTA Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 reveal delay-700 hero-el">
+                    <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20um%20or%C3%A7amento%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary text-center">
+                        Solicite um orçamento
+                    </a>
+                    <a href="#servicos" class="btn-glass-secondary text-center">
+                        Nossos serviços
+                        <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Marquee -->
+        <div class="absolute bottom-0 left-0 right-0 z-10 py-3.5 md:py-4 border-t border-brand-500/[0.08] bg-surface-50/60 backdrop-blur-sm">
+            <div class="marquee-container">
+                <div class="marquee-content">
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Maquiagem Social</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Noivas</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Penteados</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Automaquiagem</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Premium Beauty</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                </div>
+                <div class="marquee-content" aria-hidden="true">
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Maquiagem Social</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Noivas</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Penteados</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Automaquiagem</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                    <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Premium Beauty</span>
+                    <span class="text-brand-500/20 mx-2 md:mx-3">&#x2726;</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 2 — SERVIÇOS
+         Inspired by: section/02 (Fluz 3-card grid + split sections)
+         Content from: MAQUIAGEM 2026.pdf, PENTEADO2026.pdf
+         Images: fotos/ + Pinterest/
+    ═══════════════════════════════════════════════════════ -->
+    <section id="servicos" class="relative py-20 md:py-32 overflow-hidden">
+
+        <!-- Background decorations -->
+        <div class="absolute top-0 right-0 w-[350px] h-[350px] rounded-full bg-brand-300/[0.06] blur-[90px] pointer-events-none"></div>
+        <div class="absolute bottom-[20%] left-[5%] w-[250px] h-[250px] rounded-full bg-brand-400/[0.05] blur-[70px] pointer-events-none anim-glow" style="animation-delay:-1.5s"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Section Header -->
+            <div class="text-center mb-16 md:mb-20">
+                <div class="reveal delay-100">
+                    <span class="text-[11px] font-body font-semibold tracking-[0.2em] uppercase text-brand-500 block mb-4">Nossos Serviços</span>
+                </div>
+                <h2 class="reveal delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-dark-300 mb-5" id="servicos-title">
+                    <span class="text-reveal-wrap"><span class="text-reveal-inner delay-200">Beleza sob medida</span></span>
+                    <span class="text-reveal-wrap"><span class="text-reveal-inner delay-300 font-serif italic font-semibold text-brand-700"> para cada momento.</span></span>
+                </h2>
+                <p class="reveal delay-400 text-base md:text-lg leading-[1.7] text-dark-50 max-w-[520px] mx-auto">
+                    Cada serviço é uma experiência exclusiva, pensada com carinho e técnica para realçar a sua beleza natural.
+                </p>
+            </div>
+
+            <!-- ═══ 3-CARD GRID (Fluz-style, s02_img2 reference) ═══ -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-20 md:mb-28">
+
+                <!-- Card 1: MAQUIAGEM (carousel: 3 images) -->
+                <div class="reveal delay-200 group">
+                    <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
+                        <!-- Image carousel -->
+                        <img src="fotos/IMG_6459.JPG" alt="Maquiagem Social" class="card-carousel-img active object-center" data-carousel="maq"/>
+                        <img src="fotos/IMG_6468.JPG" alt="Maquiagem divertida" class="card-carousel-img object-top" data-carousel="maq"/>
+                        <img src="fotos/IMG_6490.JPG" alt="Maquiagem produtos" class="card-carousel-img object-top" data-carousel="maq"/>
+                        <!-- Gradient overlay — TOP to BOTTOM for text readability -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
+                        <!-- Content -->
+                        <div class="absolute inset-0 z-[2] p-6 md:p-8 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="font-display text-2xl md:text-3xl font-bold uppercase tracking-tight text-white leading-none">Maquiagem</span>
+                                    <svg class="info-card-arrow w-5 h-5 text-white" viewBox="0 0 20 20" fill="none"><path d="M4 10h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </div>
+                                <p class="text-base text-white/85 leading-relaxed max-w-[280px]">Maquiagem social com produtos premium, cílios inclusos e técnica individualizada.</p>
+                            </div>
+                            <a href="#maquiagem-detail" class="btn-glass-secondary !py-3 !px-6 !text-[12px] !bg-white/20 !text-white !border-white/30 hover:!bg-white/35 self-start">
+                                Saiba mais
+                                <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: PENTEADOS (carousel: 3 images) -->
+                <div class="reveal delay-300 group">
+                    <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
+                        <img src="fotos/Pinterest/03.jpeg" alt="Penteados" class="card-carousel-img active object-center" data-carousel="pent"/>
+                        <img src="fotos/Pinterest/05.jpeg" alt="Penteado elegante" class="card-carousel-img object-top" data-carousel="pent"/>
+                        <img src="fotos/Pinterest/06.jpeg" alt="Penteado sofisticado" class="card-carousel-img object-top" data-carousel="pent"/>
+                        <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
+                        <div class="absolute inset-0 z-[2] p-6 md:p-8 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="font-display text-2xl md:text-3xl font-bold uppercase tracking-tight text-white leading-none">Penteados</span>
+                                    <svg class="info-card-arrow w-5 h-5 text-white" viewBox="0 0 20 20" fill="none"><path d="M4 10h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </div>
+                                <p class="text-base text-white/85 leading-relaxed max-w-[280px]">Penteados sociais, escova e babyliss com acabamento profissional por Kelly Silva.</p>
+                            </div>
+                            <a href="#penteados" class="btn-glass-secondary !py-3 !px-6 !text-[12px] !bg-white/20 !text-white !border-white/30 hover:!bg-white/35 self-start">
+                                Saiba mais
+                                <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: NOIVAS (carousel: 3 images) -->
+                <div class="reveal delay-400 group">
+                    <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
+                        <img src="fotos/Pinterest/01.jpeg" alt="Noiva B&W" class="card-carousel-img active object-center" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/02.jpeg" alt="Noiva maquiagem" class="card-carousel-img object-top" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/04.jpeg" alt="Noiva preparacao" class="card-carousel-img object-center" data-carousel="noiv"/>
+                        <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
+                        <div class="absolute inset-0 z-[2] p-6 md:p-8 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="font-display text-2xl md:text-3xl font-bold uppercase tracking-tight text-white leading-none">Noivas</span>
+                                    <svg class="info-card-arrow w-5 h-5 text-white" viewBox="0 0 20 20" fill="none"><path d="M4 10h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </div>
+                                <p class="text-base text-white/85 leading-relaxed max-w-[280px]">Pacote completo com prova, maquiagem à prova d'água, penteado e assessoria.</p>
+                            </div>
+                            <a href="#noivas" class="btn-glass-secondary !py-3 !px-6 !text-[12px] !bg-white/20 !text-white !border-white/30 hover:!bg-white/35 self-start">
+                                Saiba mais
+                                <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ MOBILE SEPARATOR: Cards → Maquiagem Detail ═══ -->
+            <div class="section-separator md:hidden reveal">
+                <span class="section-separator-label">Detalhes dos serviços</span>
+            </div>
+
+            <!-- ═══ SPLIT SECTION: Maquiagem Detail ═══ -->
+            <div id="maquiagem-detail" class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center mb-16 md:mb-28">
+                <!-- Text side -->
+                <div class="order-2 md:order-1">
+                    <div class="reveal-left delay-100 mb-6">
+                        <div class="pill-highlight">
+                            <iconify-icon icon="solar:pallete-2-bold" class="text-lg"></iconify-icon>
+                            Maquiagem Social
+                        </div>
+                    </div>
+                    <h3 class="reveal-left delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-dark-300 mb-5 leading-[1.1]">
+                        Realce a sua beleza com técnica <span class="font-serif italic font-semibold text-brand-700">individualizada.</span>
+                    </h3>
+                    <p class="reveal-left delay-300 text-lg leading-[1.7] text-dark-50 mb-7">
+                        Maquiagem social completa com produtos de alta performance, resistente à água, com cílios inclusos e fotos tipo studio disponíveis. Material higienizado e técnica adaptada ao seu tipo de pele.
+                    </p>
+                    <ul class="reveal delay-400 space-y-4 mb-9">
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Cílios inclusos no serviço
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Resistente à água
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Produtos específicos para seu tipo de pele
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Fotos tipo studio disponíveis
+                        </li>
+                    </ul>
+                    <div class="reveal delay-500 flex flex-wrap gap-3">
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20na%20Maquiagem%20Social%20(R%24%20240)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
+                            Agendar — R$ 240
+                        </a>
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20Maquiagem%20Social%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary">
+                            Tirar dúvidas
+                            <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+                <!-- Image side -->
+                <div class="order-1 md:order-2 reveal-scale delay-200">
+                    <div class="relative img-3d-lift">
+                        <div class="rounded-3xl overflow-hidden shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+                            <img src="fotos/IMG_6475.JPG" alt="Maquiagem Social — Bia Beltrão" class="w-full aspect-[4/5] object-cover zoom-loop"/>
+                        </div>
+                        <div class="absolute -bottom-5 -right-2 md:-right-6 glass rounded-2xl px-6 py-4 shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)] anim-float" style="animation-delay:-1s">
+                            <span class="font-display text-2xl font-bold text-dark-300">R$ 240</span>
+                            <span class="text-sm text-dark-50 block font-body">por sessão</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ MOBILE SEPARATOR: Maquiagem → Automaquiagem ═══ -->
+            <div class="section-separator md:hidden reveal">
+                <span class="section-separator-label">Curso</span>
+            </div>
+
+            <!-- ═══ SPLIT SECTION: Automaquiagem ═══ -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center mb-20 md:mb-28">
+                <!-- Image side -->
+                <div class="reveal-scale delay-200">
+                    <div class="relative img-3d-lift">
+                        <div class="rounded-3xl overflow-hidden shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+                            <img src="fotos/IMG_6483.JPG" alt="Curso de Automaquiagem" class="w-full aspect-[4/5] object-cover zoom-loop" style="animation-delay: -5s;"/>
+                        </div>
+                        <div class="absolute -bottom-5 -left-2 md:-left-6 glass rounded-2xl px-6 py-4 shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)] anim-float" style="animation-delay:-2.5s">
+                            <span class="font-display text-2xl font-bold text-dark-300">3h</span>
+                            <span class="text-sm text-dark-50 block font-body">de aula prática</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Text side -->
+                <div>
+                    <div class="reveal-left delay-100 mb-6">
+                        <div class="pill-highlight">
+                            <iconify-icon icon="solar:magic-stick-3-bold" class="text-lg"></iconify-icon>
+                            Automaquiagem
+                        </div>
+                    </div>
+                    <h3 class="reveal-left delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-dark-300 mb-5 leading-[1.1]">
+                        Aprenda a realçar sua <span class="font-serif italic font-semibold text-brand-700">própria beleza.</span>
+                    </h3>
+                    <p class="reveal-left delay-300 text-lg leading-[1.7] text-dark-50 mb-7">
+                        Curso prático de 3 horas com material incluso. Aprenda técnicas profissionais, receba ajuda na montagem do seu kit e saia confiante para criar looks incríveis.
+                    </p>
+                    <ul class="reveal delay-400 space-y-4 mb-9">
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Material incluso
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Aula 100% prática
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            Ajuda na montagem do kit
+                        </li>
+                        <li class="flex items-center gap-3 text-base text-dark-300">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                            </span>
+                            No seu domicílio ou no studio
+                        </li>
+                    </ul>
+                    <div class="reveal delay-500 flex flex-wrap gap-3">
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20na%20Maquiagem%20Social%20Completa%20(R%24%20450)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
+                            Agendar — R$ 450
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ STATS BAR ═══ -->
+            <div class="reveal delay-200">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-0 glass rounded-2xl overflow-hidden shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+                    <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-100">
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">500+</div>
+                        <div class="text-sm font-body text-dark-50">Noivas atendidas</div>
+                    </div>
+                    <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-200">
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">10+</div>
+                        <div class="text-sm font-body text-dark-50">Anos de experiência</div>
+                    </div>
+                    <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-300">
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">4.9</div>
+                        <div class="text-sm font-body text-dark-50">Avaliação média</div>
+                    </div>
+                    <div class="text-center p-6 md:p-8 reveal delay-400">
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">100%</div>
+                        <div class="text-sm font-body text-dark-50">Produtos premium</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 3 — NOIVAS (v4)
+         Content from: Noivas 2026 Bia Beltrão.pdf
+         Images: Pinterest bridal + fotos/ mix
+    ═══════════════════════════════════════════════════════ -->
+    <section id="noivas" class="relative py-24 md:py-36 overflow-hidden" style="background: linear-gradient(180deg, #170100 0%, #1a0800 40%, #211410 100%);">
+
+        <!-- Animated warm glows -->
+        <div class="absolute top-[20%] right-[15%] w-[350px] h-[350px] rounded-full bg-brand-500/[0.06] blur-[120px] pointer-events-none anim-glow" style="animation-delay:-1s"></div>
+        <div class="absolute bottom-[10%] left-[10%] w-[250px] h-[250px] rounded-full bg-brand-400/[0.04] blur-[90px] pointer-events-none anim-float-slow"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Section Header — New CTA text -->
+            <div class="text-center mb-12 md:mb-16">
+                <div class="reveal delay-100">
+                    <span class="text-xs md:text-[13px] font-body font-semibold tracking-[0.2em] uppercase text-brand-400/70 block mb-5">Noivas</span>
+                </div>
+                <h2 class="reveal delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-white mb-5 max-w-[750px] mx-auto leading-[1.15]">
+                    Mais do que uma produção: uma experiência pensada para fazer você se sentir
+                </h2>
+                <!-- "Única e Especial" — oversized italic accent with decorative underline -->
+                <div class="reveal delay-300 relative inline-block mb-6">
+                    <span class="font-serif italic font-semibold text-brand-400 text-6xl md:text-8xl leading-[1] tracking-tight">única e especial</span>
+                    <!-- Decorative curved underline (brand gold) -->
+                    <svg class="absolute -bottom-2 md:-bottom-3 left-[5%] w-[90%] h-auto" viewBox="0 0 400 24" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                        <path d="M2 18C60 6 140 2 200 8C260 14 340 18 398 6" stroke="#D4A574" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 2px 4px rgba(212,165,116,0.3));"/>
+                    </svg>
+                </div>
+                <p class="reveal delay-300 text-lg md:text-xl leading-[1.7] text-white/70 max-w-[620px] mx-auto">
+                    Cada detalhe do seu atendimento é cuidadosamente planejado para valorizar sua essência e fazer com que você viva o seu grande dia com confiança, beleza e tranquilidade.
+                </p>
+            </div>
+        </div>
+
+        <!-- Image Marquee Strip (infinite horizontal scroll + pulse) -->
+        <div class="mb-16 md:mb-24 reveal-fade delay-400">
+            <div class="img-marquee-container">
+                <div class="img-marquee-track">
+                    <div class="img-marquee-item" style="animation-delay:0s"><img src="fotos/Pinterest/01.jpeg" alt="Noiva B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.5s"><img src="fotos/Pinterest/02.jpeg" alt="Noiva dourada"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1s"><img src="fotos/IMG_6475.JPG" alt="Bia close-up"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.5s"><img src="fotos/Pinterest/06_copy.jpeg" alt="Noiva cilios B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:2s"><img src="fotos/Pinterest/07.jpeg" alt="Noiva detalhe"/></div>
+                    <div class="img-marquee-item" style="animation-delay:2.5s"><img src="fotos/IMG_6476.JPG" alt="Bia B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.3s"><img src="fotos/Pinterest/04.jpeg" alt="Noiva brush B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.8s"><img src="fotos/IMG_6491.JPG" alt="Bia elegante B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.3s"><img src="fotos/IMG_6474.JPG" alt="Bia serena"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.8s"><img src="fotos/IMG_6477.JPG" alt="Bia dinamica"/></div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="img-marquee-item" style="animation-delay:0s"><img src="fotos/Pinterest/01.jpeg" alt="Noiva B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.5s"><img src="fotos/Pinterest/02.jpeg" alt="Noiva dourada"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1s"><img src="fotos/IMG_6475.JPG" alt="Bia close-up"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.5s"><img src="fotos/Pinterest/06_copy.jpeg" alt="Noiva cilios B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:2s"><img src="fotos/Pinterest/07.jpeg" alt="Noiva detalhe"/></div>
+                    <div class="img-marquee-item" style="animation-delay:2.5s"><img src="fotos/IMG_6476.JPG" alt="Bia B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.3s"><img src="fotos/Pinterest/04.jpeg" alt="Noiva brush B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:0.8s"><img src="fotos/IMG_6491.JPG" alt="Bia elegante B&W" class="grayscale contrast-[1.1]"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.3s"><img src="fotos/IMG_6474.JPG" alt="Bia serena"/></div>
+                    <div class="img-marquee-item" style="animation-delay:1.8s"><img src="fotos/IMG_6477.JPG" alt="Bia dinamica"/></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Divider -->
+            <div class="card-divider w-full max-w-xs mx-auto mb-16 md:mb-20 opacity-30"></div>
+
+            <!-- Packages Grid (3 cards) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 mb-16 md:mb-20">
+
+                <!-- Package 1: Dia da Noiva -->
+                <div class="reveal delay-200 group">
+                    <div class="glass-dark rounded-3xl p-7 md:p-8 flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(212,165,116,0.1)]">
+                        <div class="mb-6">
+                            <div class="pill-noivas"><iconify-icon icon="solar:crown-bold"></iconify-icon> Dia da Noiva</div>
+                        </div>
+                        <div class="mb-6">
+                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 3.000</span>
+                            <span class="text-sm text-white/50 block mt-1 font-body">pacote completo</span>
+                        </div>
+                        <div class="card-divider w-full mb-6 opacity-20"></div>
+                        <ul class="space-y-4 mb-8 flex-1">
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Maquiagem com cílios inclusos</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Penteado completo</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Prova da maquiagem e penteado</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Assessoria para acessórios</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Prévia 1 semana antes</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Maquiagem à prova d'água</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Aplicação de véu e grinalda</li>
+                        </ul>
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !text-white !border-white/20 !bg-white/[0.07] hover:!bg-white/[0.12] w-full text-center">
+                            Agendar consultoria <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Package 2: Retoque Noiva -->
+                <div class="reveal delay-300 group">
+                    <div class="glass-dark rounded-3xl p-7 md:p-8 flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(212,165,116,0.1)]">
+                        <div class="mb-6">
+                            <div class="pill-noivas"><iconify-icon icon="solar:magic-stick-3-bold"></iconify-icon> Retoque Noiva</div>
+                        </div>
+                        <div class="mb-6">
+                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 850</span>
+                            <span class="text-sm text-white/50 block mt-1 font-body">acompanhamento</span>
+                        </div>
+                        <div class="card-divider w-full mb-6 opacity-20"></div>
+                        <ul class="space-y-4 mb-8 flex-1">
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Retoque da maquiagem</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Retirada do véu</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Troca/retoque do penteado</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Até 2h no local do evento</li>
+                        </ul>
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20(Retoque%20Noiva)%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !text-white !border-white/20 !bg-white/[0.07] hover:!bg-white/[0.12] w-full text-center">
+                            Agendar consultoria <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Package 3: Mãe da Noiva -->
+                <div class="reveal delay-400 group">
+                    <div class="glass-dark rounded-3xl p-7 md:p-8 flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(212,165,116,0.1)]">
+                        <div class="mb-6">
+                            <div class="pill-noivas"><iconify-icon icon="solar:heart-bold"></iconify-icon> Mãe da Noiva</div>
+                        </div>
+                        <div class="mb-6">
+                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 650</span>
+                            <span class="text-sm text-white/50 block mt-1 font-body">pacote especial</span>
+                        </div>
+                        <div class="card-divider w-full mb-6 opacity-20"></div>
+                        <ul class="space-y-4 mb-8 flex-1">
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Maquiagem com cílios inclusos</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Penteado completo</li>
+                            <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Assessoria para acessórios</li>
+                        </ul>
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20(M%C3%A3e%20da%20Noiva)%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !text-white !border-white/20 !bg-white/[0.07] hover:!bg-white/[0.12] w-full text-center">
+                            Agendar consultoria <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom info + CTA -->
+            <div class="text-center reveal delay-300">
+                <div class="glass-dark rounded-2xl p-6 md:p-8 max-w-[600px] mx-auto mb-8">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0">
+                            <iconify-icon class="text-brand-400 text-lg" icon="solar:info-circle-bold"></iconify-icon>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-display text-base font-bold text-white mb-1">Reserva de Data</p>
+                            <p class="text-sm text-white/70 leading-relaxed">A data só será reservada mediante pagamento de 30% do valor na assinatura do contrato. O valor pode ser parcelado no cartão.</p>
+                        </div>
+                    </div>
+                </div>
+                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !bg-gradient-to-r !from-brand-700 !to-brand-500 !border-brand-500/50 inline-flex">
+                    Agendar Consultoria Noivas
+                    <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 4 — PENTEADOS
+         Content from: PENTEADO2026.pdf
+         Images: Pinterest/03, 05, 06 + PDF hairstyle grids
+    ═══════════════════════════════════════════════════════ -->
+    <section id="penteados" class="relative py-24 md:py-36 overflow-hidden section-warm">
+
+        <!-- Background decorations -->
+        <div class="absolute top-[15%] left-[8%] w-[300px] h-[300px] rounded-full bg-brand-400/[0.06] blur-[90px] pointer-events-none anim-float-slow"></div>
+        <div class="absolute bottom-[20%] right-[5%] w-[250px] h-[250px] rounded-full bg-brand-300/[0.05] blur-[70px] pointer-events-none anim-glow" style="animation-delay:-2s"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Section Header -->
+            <div class="text-center mb-14 md:mb-20">
+                <div class="reveal delay-100">
+                    <span class="text-xs md:text-[13px] font-body font-semibold tracking-[0.2em] uppercase text-brand-500 block mb-5">Penteados</span>
+                </div>
+                <h2 class="reveal delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-dark-300 mb-5 max-w-[700px] mx-auto leading-[1.1]">
+                    Penteados para cada <span class="font-serif italic font-semibold text-brand-700">estilo e ocasião</span>
+                </h2>
+                <p class="reveal delay-300 text-lg md:text-xl leading-[1.7] text-dark-50 max-w-[560px] mx-auto">
+                    Com Kelly Silva — especialista em penteados sociais e para noivas. Técnica individualizada para lisos, ondulados e cacheados.
+                </p>
+            </div>
+
+            <!-- ═══ 3 Penteado Carousel Cards ═══ -->
+            <div class="penteado-scroll md:grid md:grid-cols-3 md:gap-6 mb-16 md:mb-24 -mx-6 md:mx-0 px-6 md:px-0">
+
+                <!-- Card 1: Penteado Social (Lisos/Ondulados) -->
+                <div class="penteado-scroll-item reveal delay-200 group">
+                    <div class="penteado-card aspect-[3/4] relative">
+                        <!-- Carousel images from PDF page 2 + Pinterest -->
+                        <img src="fotos/Pinterest/05.jpeg" alt="Penteado elegante" class="card-carousel-img active object-top" data-carousel="pent1"/>
+                        <img src="fotos/Pinterest/06.jpeg" alt="Coque sofisticado" class="card-carousel-img object-top" data-carousel="pent1"/>
+                        <img src="fotos/Pinterest/03.jpeg" alt="Updo cacheado" class="card-carousel-img object-center" data-carousel="pent1"/>
+                        <!-- Gradient overlay bottom -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
+                        <!-- Content -->
+                        <div class="absolute bottom-0 left-0 right-0 z-[2] p-6 md:p-8">
+                            <div class="pill-highlight !text-[12px] !py-2 !px-4 !rounded-xl mb-4">
+                                <iconify-icon icon="solar:scissors-bold" class="text-sm"></iconify-icon>
+                                Penteado Social
+                            </div>
+                            <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Lisos & Ondulados</h3>
+                            <p class="text-sm text-white/70 mb-4 leading-relaxed">Coques, tranças, semi-presos e penteados elaborados para cabelos lisos e ondulados.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-display text-2xl font-bold text-white">R$ 190</span>
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Lisos%20%26%20Ondulados%20(R%24%20190)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Penteado Social (Cacheados) -->
+                <div class="penteado-scroll-item reveal delay-300 group">
+                    <div class="penteado-card aspect-[3/4] relative">
+                        <img src="fotos/Pinterest/03.jpeg" alt="Cacheado updo" class="card-carousel-img active object-center" data-carousel="pent2"/>
+                        <img src="fotos/IMG_6491.JPG" alt="Penteado elegante B&W" class="card-carousel-img object-top" data-carousel="pent2"/>
+                        <img src="fotos/Pinterest/05.jpeg" alt="Coque lateral" class="card-carousel-img object-top" data-carousel="pent2"/>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
+                        <div class="absolute bottom-0 left-0 right-0 z-[2] p-6 md:p-8">
+                            <div class="pill-highlight !text-[12px] !py-2 !px-4 !rounded-xl mb-4">
+                                <iconify-icon icon="solar:scissors-bold" class="text-sm"></iconify-icon>
+                                Penteado Social
+                            </div>
+                            <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Cacheados</h3>
+                            <p class="text-sm text-white/70 mb-4 leading-relaxed">Penteados que valorizam e definem seus cachos com babyliss apropriado e técnica especializada.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-display text-2xl font-bold text-white">R$ 190</span>
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Cacheados%20(R%24%20190)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Escova / Babyliss -->
+                <div class="penteado-scroll-item reveal delay-400 group">
+                    <div class="penteado-card aspect-[3/4] relative">
+                        <img src="fotos/Pinterest/06.jpeg" alt="Escova modelada" class="card-carousel-img active object-top" data-carousel="pent3"/>
+                        <img src="fotos/Pinterest/05.jpeg" alt="Babyliss elegante" class="card-carousel-img object-top" data-carousel="pent3"/>
+                        <img src="fotos/IMG_6482.JPG" alt="Bia styling" class="card-carousel-img object-center" data-carousel="pent3"/>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
+                        <div class="absolute bottom-0 left-0 right-0 z-[2] p-6 md:p-8">
+                            <div class="pill-highlight !text-[12px] !py-2 !px-4 !rounded-xl mb-4">
+                                <iconify-icon icon="solar:magic-stick-3-bold" class="text-sm"></iconify-icon>
+                                Escova / Babyliss
+                            </div>
+                            <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Ondas & Volume</h3>
+                            <p class="text-sm text-white/70 mb-4 leading-relaxed">Escova modelada, babyliss com ondas definidas, cachos volumosos ou liso com movimento.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-display text-2xl font-bold text-white">R$ 120</span>
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Escova%20%2F%20Babyliss%20(R%24%20120)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Instructions Card (from PDF page 6) ═══ -->
+            <div class="reveal delay-300 max-w-3xl mx-auto">
+                <div class="glass rounded-3xl p-8 md:p-10 shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="pill-highlight">
+                            <iconify-icon icon="solar:clipboard-list-bold" class="text-lg"></iconify-icon>
+                            Instruções Pré-Atendimento
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Lisos / Ondulados -->
+                        <div>
+                            <h4 class="font-display text-xl font-bold text-dark-300 mb-3 flex items-center gap-2">
+                                <iconify-icon icon="solar:wind-linear" class="text-brand-500"></iconify-icon>
+                                Cabelos Lisos / Ondulados
+                            </h4>
+                            <p class="text-base leading-[1.7] text-dark-50 mb-4">
+                                É necessário que a cliente esteja com o cabelo lavado apenas com shampoo e naturalmente seco no dia e momento do atendimento.
+                            </p>
+                            <div class="glass-subtle rounded-xl p-4 border-l-4 border-brand-500/40">
+                                <p class="text-sm text-dark-300 font-semibold flex items-start gap-2">
+                                    <iconify-icon icon="solar:danger-triangle-bold" class="text-amber-600 text-base mt-0.5 flex-shrink-0"></iconify-icon>
+                                    NÃO será possível garantir a durabilidade do penteado caso a cliente chegue ao studio com o cabelo molhado.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Cacheados -->
+                        <div>
+                            <h4 class="font-display text-xl font-bold text-dark-300 mb-3 flex items-center gap-2">
+                                <iconify-icon icon="solar:atom-linear" class="text-brand-500"></iconify-icon>
+                                Cabelos Cacheados
+                            </h4>
+                            <p class="text-base leading-[1.7] text-dark-50 mb-4">
+                                Finalizar o cabelo como de costume. Evitar apenas o excesso de produto, pois será usado fonte de calor (babyliss apropriado) para definição dos cachos.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Kelly Silva Instagram -->
+                    <div class="card-divider w-full mt-8 mb-6"></div>
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center">
+                                <iconify-icon icon="mdi:instagram" class="text-brand-600 text-xl"></iconify-icon>
+                            </div>
+                            <div>
+                                <p class="font-display text-base font-bold text-dark-300">Kelly Silva</p>
+                                <p class="text-sm text-dark-50">@kelly.silvaprofissional</p>
+                            </div>
+                        </div>
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20penteado%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
+                            Agendar Penteado
+                            <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 5 — CTA + PAYMENT
+         Content from: MAQUIAGEM 2026.pdf (payment info)
+    ═══════════════════════════════════════════════════════ -->
+    <section id="cta" class="relative py-24 md:py-36 overflow-hidden">
+
+        <!-- Background decorations -->
+        <div class="absolute inset-0 bg-gradient-to-b from-surface-50 via-brand-200/20 to-surface-50 pointer-events-none"></div>
+        <div class="absolute top-[30%] left-[50%] -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-brand-400/[0.08] blur-[120px] pointer-events-none anim-glow"></div>
+        <div class="absolute top-[10%] right-[15%] w-14 h-14 border border-brand-500/[0.08] rounded-full anim-spin pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Main CTA Block -->
+            <div class="text-center mb-16 md:mb-20">
+                <div class="reveal delay-100">
+                    <span class="text-xs md:text-[13px] font-body font-semibold tracking-[0.2em] uppercase text-brand-500 block mb-5">Contato</span>
+                </div>
+                <h2 class="reveal delay-200 font-display text-4xl md:text-5xl font-bold tracking-tight text-dark-300 mb-3 max-w-[700px] mx-auto leading-[1.1]">
+                    Pronta para revelar sua
+                </h2>
+                <div class="reveal delay-300 relative inline-block mb-6">
+                    <span class="font-serif italic font-semibold text-brand-700 text-5xl md:text-7xl leading-[1] tracking-tight">melhor versão?</span>
+                    <svg class="absolute -bottom-2 md:-bottom-3 left-[5%] w-[90%] h-auto" viewBox="0 0 400 24" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                        <path d="M2 18C60 6 140 2 200 8C260 14 340 18 398 6" stroke="#D4A574" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 2px 4px rgba(212,165,116,0.3));"/>
+                    </svg>
+                </div>
+                <p class="reveal delay-400 text-lg md:text-xl leading-[1.7] text-dark-50 max-w-[520px] mx-auto mb-10">
+                    Agende agora e garanta sua data. Atendimento personalizado, produtos premium e a dedicação que você merece.
+                </p>
+
+                <!-- CTA Buttons -->
+                <div class="reveal delay-500 flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                    <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20um%20or%C3%A7amento%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !py-4 !px-10 !text-[13px]">
+                        <iconify-icon icon="solar:calendar-bold" class="text-base"></iconify-icon>
+                        Solicite um Orçamento
+                    </a>
+                    <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-4 !px-10 !text-[13px]">
+                        <iconify-icon icon="mdi:whatsapp" class="text-lg"></iconify-icon>
+                        WhatsApp
+                        <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Payment & Policy Info -->
+            <div class="reveal delay-400 max-w-3xl mx-auto">
+                <div class="glass rounded-3xl p-8 md:p-10 shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Payment Methods -->
+                        <div>
+                            <h4 class="font-display text-lg font-bold text-dark-300 mb-4 flex items-center gap-2">
+                                <iconify-icon icon="solar:card-bold" class="text-brand-500 text-xl"></iconify-icon>
+                                Formas de Pagamento
+                            </h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-center gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                        <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                                    </span>
+                                    Cartão de crédito e débito
+                                </li>
+                                <li class="flex items-center gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                        <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                                    </span>
+                                    PIX
+                                </li>
+                                <li class="flex items-center gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                        <iconify-icon class="text-emerald-600 text-xs" icon="solar:check-read-linear"></iconify-icon>
+                                    </span>
+                                    PicPay
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Policy -->
+                        <div>
+                            <h4 class="font-display text-lg font-bold text-dark-300 mb-4 flex items-center gap-2">
+                                <iconify-icon icon="solar:clipboard-list-bold" class="text-brand-500 text-xl"></iconify-icon>
+                                Política de Agendamento
+                            </h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-start gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <iconify-icon class="text-brand-600 text-xs" icon="solar:info-circle-linear"></iconify-icon>
+                                    </span>
+                                    30% de sinal para reserva de data
+                                </li>
+                                <li class="flex items-start gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <iconify-icon class="text-brand-600 text-xs" icon="solar:info-circle-linear"></iconify-icon>
+                                    </span>
+                                    Horário agendado após recebimento do sinal
+                                </li>
+                                <li class="flex items-start gap-3 text-base text-dark-300">
+                                    <span class="w-6 h-6 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <iconify-icon class="text-amber-600 text-xs" icon="solar:danger-triangle-linear"></iconify-icon>
+                                    </span>
+                                    Atrasos serão descontados do tempo de atendimento
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card-divider w-full mt-8 mb-6"></div>
+
+                    <!-- Business Info -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm text-dark-50">
+                        <div>
+                            <p class="font-body font-semibold text-dark-300">Ana Beatriz Beltrão de Oliveira</p>
+                            <p>CNPJ: 49.854.063/0001-02 &middot; Nubank</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="mdi:instagram" class="text-brand-500 text-lg"></iconify-icon>
+                            <span class="font-body font-semibold text-dark-300">@biabeltrao</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         FOOTER
+    ═══════════════════════════════════════════════════════ -->
+    <footer class="relative py-16 md:py-20 overflow-hidden">
+        <!-- Background -->
+        <div class="absolute inset-0 bg-gradient-to-b from-surface-50 to-brand-200/25 pointer-events-none"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-brand-400/[0.06] blur-[80px] pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12">
+
+            <!-- Brand -->
+            <div class="text-center mb-10 reveal">
+                <h2 class="font-display text-5xl md:text-7xl font-bold tracking-tight text-dark-300 mb-2">
+                    <span class="font-serif italic font-semibold text-brand-700">Bia</span> Beltrão
+                </h2>
+                <p class="text-base text-dark-50 font-body">Beauty Studio</p>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="flex flex-wrap justify-center gap-6 md:gap-8 mb-10 reveal delay-200">
+                <a href="#hero" class="text-sm font-body font-medium text-dark-50 hover:text-brand-700 transition-colors">Início</a>
+                <a href="#servicos" class="text-sm font-body font-medium text-dark-50 hover:text-brand-700 transition-colors">Maquiagem</a>
+                <a href="#noivas" class="text-sm font-body font-medium text-dark-50 hover:text-brand-700 transition-colors">Noivas</a>
+                <a href="#penteados" class="text-sm font-body font-medium text-dark-50 hover:text-brand-700 transition-colors">Penteados</a>
+                <a href="#cta" class="text-sm font-body font-medium text-dark-50 hover:text-brand-700 transition-colors">Contato</a>
+            </div>
+
+            <!-- Social Icons -->
+            <div class="flex justify-center gap-4 mb-10 reveal delay-300">
+                <a href="https://instagram.com/biabeltrao" target="_blank" rel="noopener noreferrer" class="w-11 h-11 rounded-full glass-subtle flex items-center justify-center hover:bg-white/50 hover:scale-110 transition-all duration-300" aria-label="Instagram Bia">
+                    <iconify-icon icon="mdi:instagram" class="text-dark-50 text-xl hover:text-brand-600"></iconify-icon>
+                </a>
+                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="w-11 h-11 rounded-full glass-subtle flex items-center justify-center hover:bg-white/50 hover:scale-110 transition-all duration-300" aria-label="WhatsApp">
+                    <iconify-icon icon="mdi:whatsapp" class="text-dark-50 text-xl hover:text-emerald-600"></iconify-icon>
+                </a>
+                <a href="https://instagram.com/kelly.silvaprofissional" target="_blank" rel="noopener noreferrer" class="w-11 h-11 rounded-full glass-subtle flex items-center justify-center hover:bg-white/50 hover:scale-110 transition-all duration-300" aria-label="Instagram Kelly">
+                    <iconify-icon icon="solar:scissors-bold" class="text-dark-50 text-lg hover:text-brand-600"></iconify-icon>
+                </a>
+            </div>
+
+            <!-- Divider -->
+            <div class="card-divider w-full max-w-md mx-auto mb-8"></div>
+
+            <!-- Copyright -->
+            <div class="text-center reveal delay-400">
+                <p class="text-xs font-body text-dark-50/50">&copy; 2026 Bia Beltrão Beauty Studio. Todos os direitos reservados.</p>
+                <p class="text-xs font-body text-dark-50/40 mt-1">Kelly Silva &middot; @kelly.silvaprofissional &middot; Penteados</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         JAVASCRIPT
+    ═══════════════════════════════════════════════════════ -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // 1. Nav entrance
+        setTimeout(() => document.querySelector('header').classList.add('loaded'), 250);
+
+        // 2. Hero text reveal
+        setTimeout(() => {
+            const t = document.getElementById('hero-title');
+            if (t) t.classList.add('text-revealed');
+        }, 700);
+
+        // 3. Hero elements reveal
+        setTimeout(() => {
+            document.querySelectorAll('.hero-el').forEach(el => el.classList.add('active'));
+        }, 900);
+
+        // 4. Scroll observer for future sections
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('active');
+                    if (e.target.querySelector('.text-reveal-inner')) e.target.classList.add('text-revealed');
+                    if (e.target.tagName === 'H2' || e.target.tagName === 'H1') e.target.classList.add('text-revealed');
+                }
+            });
+        }, { rootMargin: '0px 0px -40px 0px', threshold: 0.1 });
+
+        document.querySelectorAll('.reveal, .reveal-left, .reveal-scale, .reveal-fade').forEach(el => obs.observe(el));
+        document.querySelectorAll('h1, h2').forEach(el => {
+            if (el.querySelector('.text-reveal-inner')) obs.observe(el);
+        });
+
+        // 5. Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    closeMobileMenu();
+                }
+            });
+        });
+
+        // 6. Card image carousels (crossfade every 3s)
+        const carouselGroups = {};
+        document.querySelectorAll('.card-carousel-img').forEach(img => {
+            const id = img.dataset.carousel;
+            if (!carouselGroups[id]) carouselGroups[id] = [];
+            carouselGroups[id].push(img);
+        });
+        Object.values(carouselGroups).forEach(imgs => {
+            let current = 0;
+            setInterval(() => {
+                imgs[current].classList.remove('active');
+                current = (current + 1) % imgs.length;
+                imgs[current].classList.add('active');
+            }, 3500);
+        });
+
+        // 7. Mobile menu
+        document.getElementById('menuToggle').addEventListener('click', () => {
+            document.getElementById('mobileMenu').classList.add('open');
+        });
+        document.getElementById('menuClose').addEventListener('click', closeMobileMenu);
+    });
+
+    function closeMobileMenu() {
+        document.getElementById('mobileMenu').classList.remove('open');
+    }
+    </script>
+</body>
+</html>

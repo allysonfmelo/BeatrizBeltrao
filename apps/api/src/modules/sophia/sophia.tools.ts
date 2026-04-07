@@ -40,11 +40,11 @@ export const sophiaTools: LlmTool[] = [
         properties: {
           date: {
             type: "string",
-            description: "Data no formato YYYY-MM-DD",
+            description: "Data no formato YYYY-MM-DD (ex: 2026-04-15). Use o ano correto baseado na data atual.",
           },
           service_id: {
             type: "string",
-            description: "ID do serviço para verificar a duração",
+            description: "UUID do serviço (ex: '550e8400-e29b-41d4-a716-446655440000'). Consulte a lista de IDs no contexto do sistema. NUNCA passe o nome do serviço.",
           },
         },
         required: ["date", "service_id"],
@@ -75,9 +75,9 @@ export const sophiaTools: LlmTool[] = [
       parameters: {
         type: "object",
         properties: {
-          service_id: { type: "string", description: "ID do serviço" },
-          scheduled_date: { type: "string", description: "Data no formato YYYY-MM-DD" },
-          scheduled_time: { type: "string", description: "Horário no formato HH:mm" },
+          service_id: { type: "string", description: "UUID do serviço (consulte a lista de IDs no contexto). NUNCA passe o nome do serviço." },
+          scheduled_date: { type: "string", description: "Data no formato YYYY-MM-DD (ex: 2026-04-15). Use o ano correto." },
+          scheduled_time: { type: "string", description: "Horário no formato HH:mm (ex: 14:00)" },
         },
         required: ["service_id", "scheduled_date", "scheduled_time"],
       },
@@ -258,7 +258,11 @@ async function executeCheckAvailability(
 ): Promise<string> {
   const service = await serviceService.findById(serviceId);
   if (!service) {
-    return JSON.stringify({ error: "Serviço não encontrado" });
+    const allServices = await serviceService.listActive();
+    return JSON.stringify({
+      error: `Serviço com ID '${serviceId}' não encontrado. Você deve passar o UUID do serviço, não o nome.`,
+      servicos_disponiveis: allServices.map((s) => ({ nome: s.name, id: s.id })),
+    });
   }
 
   // Check if it's a Sunday (day 0)
@@ -360,7 +364,11 @@ async function executeCreateBooking(
   // Check availability first
   const service = await serviceService.findById(data.serviceId);
   if (!service) {
-    return JSON.stringify({ error: "Serviço não encontrado" });
+    const allServices = await serviceService.listActive();
+    return JSON.stringify({
+      error: `Serviço com ID '${data.serviceId}' não encontrado. Passe o UUID do serviço, não o nome.`,
+      servicos_disponiveis: allServices.map((s) => ({ nome: s.name, id: s.id })),
+    });
   }
 
   const available = await calendarService.isSlotAvailable(

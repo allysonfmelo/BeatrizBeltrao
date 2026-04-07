@@ -254,6 +254,94 @@ a {
   margin-bottom: 12px;
 }
 
+/* KPI Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.kpi-value {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--font-heading), serif;
+  line-height: 1.1;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.kpi-trend {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.kpi-trend-up {
+  color: var(--accent);
+}
+
+.kpi-trend-down {
+  color: var(--danger);
+}
+
+/* Month Picker */
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.month-picker-label {
+  font-family: var(--font-heading), serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 180px;
+  text-align: center;
+}
+
+.month-picker-btn {
+  width: 42px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 18px;
+}
+
+.chart-card {
+  padding: 20px;
+}
+
+.chart-title {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 @media (max-width: 900px) {
   .grid-top {
     grid-template-columns: 1fr;
@@ -269,6 +357,14 @@ a {
 
   .mobile-list {
     display: grid;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
   }
 }
 

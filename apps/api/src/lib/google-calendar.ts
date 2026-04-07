@@ -108,8 +108,10 @@ export async function getAvailableSlots(
  * Creates a calendar event and returns the event ID.
  */
 export async function createEvent(event: CalendarEventInput): Promise<string> {
-  const startDateTime = `${event.date}T${event.startTime}:00`;
-  const endDateTime = `${event.date}T${event.endTime}:00`;
+  const startTime = event.startTime.length === 5 ? `${event.startTime}:00` : event.startTime.slice(0, 8);
+  const endTime = event.endTime.length === 5 ? `${event.endTime}:00` : event.endTime.slice(0, 8);
+  const startDateTime = `${event.date}T${startTime}`;
+  const endDateTime = `${event.date}T${endTime}`;
 
   const result = await gwsCommand([
     "calendar",
