@@ -420,20 +420,14 @@
         }
         .penteado-card .card-carousel-img.active { opacity: 1; }
         .penteado-scroll {
-            display: flex; gap: 16px;
-            overflow-x: auto; scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; -ms-overflow-style: none;
-            padding-bottom: 8px;
+            display: flex; flex-direction: column; gap: 16px;
         }
-        .penteado-scroll::-webkit-scrollbar { display: none; }
         .penteado-scroll-item {
-            flex-shrink: 0; width: 85vw; max-width: 400px;
-            scroll-snap-align: center;
+            width: 100%;
         }
         @media (min-width: 768px) {
-            .penteado-scroll { overflow: visible; }
-            .penteado-scroll-item { width: auto; flex: 1; }
+            .penteado-scroll { flex-direction: row; }
+            .penteado-scroll-item { flex: 1; }
         }
 
         /* ═══ NOIVAS PILL (high contrast on dark) ═══ */
@@ -484,7 +478,10 @@
         <div class="max-w-[1400px] mx-auto px-4 md:px-8">
             <nav class="mt-4 md:mt-5 rounded-[20px] glass px-5 md:px-7 py-3.5 md:py-4 flex justify-between items-center shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
                 <!-- Logo -->
-                <a href="#" class="font-display text-xl md:text-2xl font-bold tracking-tight text-dark-300 hover:opacity-70 transition-opacity">BIA</a>
+                <a href="#" class="flex items-center gap-2 hover:opacity-70 transition-opacity">
+                    <img src="logo.svg" alt="Logo" class="h-8 md:h-9 w-auto"/>
+                    <span class="font-display text-lg md:text-xl font-bold tracking-tight text-dark-300"><span class="font-serif italic font-semibold text-brand-700">Bia</span> Beltrão</span>
+                </a>
 
                 <!-- Nav Links (Desktop) -->
                 <div class="hidden md:flex items-center gap-1">
@@ -810,11 +807,11 @@
                         </li>
                     </ul>
                     <div class="reveal delay-500 flex flex-wrap gap-3">
-                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20na%20Maquiagem%20Social%20(R%24%20240)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
-                            Agendar — R$ 240
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20na%20Maquiagem%20Social%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
+                            Agendar
                         </a>
                         <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20Maquiagem%20Social%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary">
-                            Tirar dúvidas
+                            Saiba mais
                             <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
                         </a>
                     </div>
@@ -826,7 +823,7 @@
                             <img src="fotos/IMG_6475.JPG" alt="Maquiagem Social — Bia Beltrão" class="w-full aspect-[4/5] object-cover zoom-loop"/>
                         </div>
                         <div class="absolute -bottom-5 -right-2 md:-right-6 glass rounded-2xl px-6 py-4 shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)] anim-float" style="animation-delay:-1s">
-                            <span class="font-display text-2xl font-bold text-dark-300">R$ 240</span>
+                            <span class="font-display text-2xl font-bold text-dark-300">1h</span>
                             <span class="text-sm text-dark-50 block font-body">por sessão</span>
                         </div>
                     </div>
@@ -893,8 +890,8 @@
                         </li>
                     </ul>
                     <div class="reveal delay-500 flex flex-wrap gap-3">
-                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20na%20Maquiagem%20Social%20Completa%20(R%24%20450)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
-                            Agendar — R$ 450
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20no%20curso%20de%20Automaquiagem%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
+                            Agendar
                         </a>
                     </div>
                 </div>
@@ -1005,7 +1002,6 @@
                             <div class="pill-noivas"><iconify-icon icon="solar:crown-bold"></iconify-icon> Dia da Noiva</div>
                         </div>
                         <div class="mb-6">
-                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 3.000</span>
                             <span class="text-sm text-white/50 block mt-1 font-body">pacote completo</span>
                         </div>
                         <div class="card-divider w-full mb-6 opacity-20"></div>
@@ -1031,7 +1027,6 @@
                             <div class="pill-noivas"><iconify-icon icon="solar:magic-stick-3-bold"></iconify-icon> Retoque Noiva</div>
                         </div>
                         <div class="mb-6">
-                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 850</span>
                             <span class="text-sm text-white/50 block mt-1 font-body">acompanhamento</span>
                         </div>
                         <div class="card-divider w-full mb-6 opacity-20"></div>
@@ -1054,7 +1049,6 @@
                             <div class="pill-noivas"><iconify-icon icon="solar:heart-bold"></iconify-icon> Mãe da Noiva</div>
                         </div>
                         <div class="mb-6">
-                            <span class="font-display text-4xl md:text-5xl font-bold text-white">R$ 650</span>
                             <span class="text-sm text-white/50 block mt-1 font-body">pacote especial</span>
                         </div>
                         <div class="card-divider w-full mb-6 opacity-20"></div>
@@ -1139,10 +1133,9 @@
                             </div>
                             <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Lisos & Ondulados</h3>
                             <p class="text-sm text-white/70 mb-4 leading-relaxed">Coques, tranças, semi-presos e penteados elaborados para cabelos lisos e ondulados.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="font-display text-2xl font-bold text-white">R$ 190</span>
-                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Lisos%20%26%20Ondulados%20(R%24%20190)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
-                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                            <div class="flex items-center justify-end">
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Lisos%20%26%20Ondulados%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Saiba mais <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
                                 </a>
                             </div>
                         </div>
@@ -1163,10 +1156,9 @@
                             </div>
                             <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Cacheados</h3>
                             <p class="text-sm text-white/70 mb-4 leading-relaxed">Penteados que valorizam e definem seus cachos com babyliss apropriado e técnica especializada.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="font-display text-2xl font-bold text-white">R$ 190</span>
-                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Cacheados%20(R%24%20190)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
-                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                            <div class="flex items-center justify-end">
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Penteado%20Social%20-%20Cacheados%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Saiba mais <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
                                 </a>
                             </div>
                         </div>
@@ -1187,10 +1179,9 @@
                             </div>
                             <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">Ondas & Volume</h3>
                             <p class="text-sm text-white/70 mb-4 leading-relaxed">Escova modelada, babyliss com ondas definidas, cachos volumosos ou liso com movimento.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="font-display text-2xl font-bold text-white">R$ 120</span>
-                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Escova%20%2F%20Babyliss%20(R%24%20120)%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
-                                    Agendar <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
+                            <div class="flex items-center justify-end">
+                                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20interesse%20em%20Escova%20%2F%20Babyliss%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[11px] !bg-white/15 !text-white !border-white/25 hover:!bg-white/25">
+                                    Saiba mais <iconify-icon icon="solar:arrow-right-linear" class="text-xs"></iconify-icon>
                                 </a>
                             </div>
                         </div>
@@ -1401,6 +1392,9 @@
 
             <!-- Brand -->
             <div class="text-center mb-10 reveal">
+                <div class="flex justify-center mb-4">
+                    <img src="logo.svg" alt="Logo Studio Beatriz Beltrão" class="h-16 md:h-20 w-auto"/>
+                </div>
                 <h2 class="font-display text-5xl md:text-7xl font-bold tracking-tight text-dark-300 mb-2">
                     <span class="font-serif italic font-semibold text-brand-700">Bia</span> Beltrão
                 </h2>
