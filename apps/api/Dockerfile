@@ -38,9 +38,8 @@ RUN pnpm build --filter=@studio/api...
 # Stage 2: Runner
 FROM node:22-alpine AS runner
 
-# Install pnpm and Google Workspace CLI (required for Google Calendar integration)
+# Install pnpm and curl for healthcheck
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate \
-    && npm install -g @googleworkspace/cli \
     && apk add --no-cache curl
 
 WORKDIR /app
@@ -60,6 +59,10 @@ COPY --from=builder /app/packages/shared/node_modules/ ./packages/shared/node_mo
 
 # Copy assets (service-reference.yaml + PDF catalogs used by Sophia)
 COPY --from=builder /app/assets/ ./assets/
+
+# Copy credentials (Google Service Account key, etc.)
+# The actual JSON file is mounted or copied at deploy time
+COPY credentials/ ./credentials/
 
 ENV NODE_ENV=production
 ENV PORT=3001

@@ -33,10 +33,12 @@ const envSchema = z.object({
   EVOLUTION_API_URL: z.string().url(),
   EVOLUTION_API_KEY: z.string().min(1),
   EVOLUTION_INSTANCE_NAME: z.string().min(1),
+  GOOGLE_SERVICE_ACCOUNT_KEY_PATH: z.string().optional(),
+  GOOGLE_CALENDAR_ID: z.string().optional(),
+  // Legacy OAuth (kept for backwards compatibility, not used with Service Account)
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
-  GOOGLE_CALENDAR_ID: z.string().optional(),
   ASAAS_API_KEY: z.string().min(1),
   ASAAS_WEBHOOK_TOKEN: z.string().min(1),
   ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),

@@ -13,6 +13,13 @@ out/
 .env.*.local
 .env.production
 
+# Credentials (service account keys, secrets)
+credentials/*.json
+credentials/*.p12
+
+# Infrastructure docs (contains sensitive service info)
+docs/INFRASTRUCTURE.md
+
 # IDE
 .vscode/
 .idea/

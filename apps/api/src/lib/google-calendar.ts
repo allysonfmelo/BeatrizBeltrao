@@ -1,12 +1,10 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { google } from "googleapis";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
 import { captureException } from "./sentry.js";
-
-const execFileAsync = promisify(execFile);
-
-const calendarId = env.GOOGLE_CALENDAR_ID ?? "primary";
 
 /** Time slot representation */
 export interface TimeSlot {
@@ -23,49 +21,64 @@ export interface CalendarEventInput {
   endTime: string;
 }
 
-/** Runs a gws CLI command and returns parsed JSON output */
-async function gwsCommand(args: string[]): Promise<unknown> {
-  try {
-    const { stdout } = await execFileAsync("gws", args, {
-      timeout: 15000,
-    });
-    const trimmed = stdout.trim();
-    if (!trimmed) return null;
-    return JSON.parse(trimmed);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown gws error";
-    logger.error("Google Workspace CLI error", { args, error: message });
-    const wrappedError = new Error(`Google Calendar error: ${message}`);
-    captureException(wrappedError, { source: "google-calendar.gws", args });
-    throw wrappedError;
+const TIMEZONE = "America/Sao_Paulo";
+
+/** Loads Service Account credentials and returns an authenticated calendar client */
+function getCalendarClient() {
+  const keyPath = env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+
+  if (!keyPath) {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY_PATH is not configured");
   }
+
+  // Resolve relative paths from project root
+  const absolutePath = keyPath.startsWith("/")
+    ? keyPath
+    : resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../../", keyPath);
+
+  const keyFile = JSON.parse(readFileSync(absolutePath, "utf8"));
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: keyFile.client_email,
+      private_key: keyFile.private_key,
+    },
+    scopes: ["https://www.googleapis.com/auth/calendar"],
+  });
+
+  return google.calendar({ version: "v3", auth });
 }
 
 /**
  * Gets busy intervals for a given date from Google Calendar.
  */
 async function getBusySlots(date: string): Promise<TimeSlot[]> {
-  const timeMin = `${date}T00:00:00Z`;
-  const timeMax = `${date}T23:59:59Z`;
+  const calendarId = env.GOOGLE_CALENDAR_ID ?? "primary";
 
-  const result = await gwsCommand([
-    "calendar",
-    "freebusy",
-    "query",
-    "--json",
-    JSON.stringify({
-      timeMin,
-      timeMax,
-      timeZone: "America/Sao_Paulo",
-      items: [{ id: calendarId }],
-    }),
-  ]);
+  try {
+    const calendar = getCalendarClient();
 
-  const data = result as {
-    calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>;
-  };
+    const response = await calendar.freebusy.query({
+      requestBody: {
+        timeMin: `${date}T00:00:00-03:00`,
+        timeMax: `${date}T23:59:59-03:00`,
+        timeZone: TIMEZONE,
+        items: [{ id: calendarId }],
+      },
+    });
 
-  return data.calendars?.[calendarId]?.busy ?? [];
+    const busy = response.data.calendars?.[calendarId]?.busy ?? [];
+    return busy.map((slot) => ({
+      start: slot.start ?? "",
+      end: slot.end ?? "",
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Google Calendar error";
+    logger.error("Google Calendar freebusy error", { date, error: message });
+    const wrappedError = new Error(`Google Calendar error: ${message}`);
+    captureException(wrappedError, { source: "google-calendar.getBusySlots", date });
+    throw wrappedError;
+  }
 }
 
 /**
@@ -108,80 +121,91 @@ export async function getAvailableSlots(
  * Creates a calendar event and returns the event ID.
  */
 export async function createEvent(event: CalendarEventInput): Promise<string> {
+  const calendarId = env.GOOGLE_CALENDAR_ID ?? "primary";
+
   const startTime = event.startTime.length === 5 ? `${event.startTime}:00` : event.startTime.slice(0, 8);
   const endTime = event.endTime.length === 5 ? `${event.endTime}:00` : event.endTime.slice(0, 8);
-  const startDateTime = `${event.date}T${startTime}`;
-  const endDateTime = `${event.date}T${endTime}`;
 
-  const result = await gwsCommand([
-    "calendar",
-    "events",
-    "insert",
-    "--params",
-    JSON.stringify({
+  try {
+    const calendar = getCalendarClient();
+
+    const response = await calendar.events.insert({
       calendarId,
-    }),
-    "--json",
-    JSON.stringify({
-      summary: event.title,
-      description: event.description,
-      start: {
-        dateTime: startDateTime,
-        timeZone: "America/Sao_Paulo",
+      requestBody: {
+        summary: event.title,
+        description: event.description,
+        start: {
+          dateTime: `${event.date}T${startTime}`,
+          timeZone: TIMEZONE,
+        },
+        end: {
+          dateTime: `${event.date}T${endTime}`,
+          timeZone: TIMEZONE,
+        },
+        status: "confirmed",
       },
-      end: {
-        dateTime: endDateTime,
-        timeZone: "America/Sao_Paulo",
-      },
-      status: "confirmed",
-    }),
-  ]);
+    });
 
-  const data = result as { id?: string; htmlLink?: string };
+    const eventId = response.data.id;
+    if (!eventId) {
+      throw new Error("Google Calendar did not return an event ID");
+    }
 
-  if (!data.id) {
-    throw new Error("Google Calendar did not return an event ID");
+    logger.info("Calendar event created", { eventId, title: event.title });
+    return eventId;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Google Calendar error";
+    logger.error("Google Calendar create event error", { event: event.title, error: message });
+    const wrappedError = new Error(`Google Calendar error: ${message}`);
+    captureException(wrappedError, { source: "google-calendar.createEvent", title: event.title });
+    throw wrappedError;
   }
-
-  logger.info("Calendar event created", { eventId: data.id, title: event.title });
-  return data.id;
 }
 
 /**
  * Deletes a calendar event by ID.
  */
 export async function deleteEvent(eventId: string): Promise<void> {
-  await gwsCommand([
-    "calendar",
-    "events",
-    "delete",
-    "--params",
-    JSON.stringify({
+  const calendarId = env.GOOGLE_CALENDAR_ID ?? "primary";
+
+  try {
+    const calendar = getCalendarClient();
+
+    await calendar.events.delete({
       calendarId,
       eventId,
-    }),
-  ]);
+    });
 
-  logger.info("Calendar event deleted", { eventId });
+    logger.info("Calendar event deleted", { eventId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Google Calendar error";
+    logger.error("Google Calendar delete event error", { eventId, error: message });
+    const wrappedError = new Error(`Google Calendar error: ${message}`);
+    captureException(wrappedError, { source: "google-calendar.deleteEvent", eventId });
+    throw wrappedError;
+  }
 }
 
 /**
  * Gets the public HTML link for a calendar event.
  */
 export async function getEventLink(eventId: string): Promise<string> {
-  const result = await gwsCommand([
-    "calendar",
-    "events",
-    "get",
-    "--params",
-    JSON.stringify({
+  const calendarId = env.GOOGLE_CALENDAR_ID ?? "primary";
+
+  try {
+    const calendar = getCalendarClient();
+
+    const response = await calendar.events.get({
       calendarId,
       eventId,
-    }),
-  ]);
+    });
 
-  const data = result as { htmlLink?: string };
-  return data.htmlLink ?? "";
+    return response.data.htmlLink ?? "";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Google Calendar error";
+    logger.error("Google Calendar get event link error", { eventId, error: message });
+    return "";
+  }
 }
 
 /** Converts "HH:mm" to minutes since midnight */

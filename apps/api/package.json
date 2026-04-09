@@ -20,6 +20,7 @@
     "@studio/shared": "workspace:*",
     "@trigger.dev/sdk": "^4.4.3",
     "drizzle-orm": "^0.39.0",
+    "googleapis": "^171.4.0",
     "hono": "^4.7.0",
     "ioredis": "^5.10.1",
     "openai": "^6.32.0",
