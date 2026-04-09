@@ -4,12 +4,33 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./types": "./src/types/index.ts",
-    "./validators": "./src/validators/index.ts",
-    "./constants": "./src/constants/index.ts",
-    "./utils": "./src/utils/index.ts"
+    "./types": {
+      "import": {
+        "types": "./src/types/index.ts",
+        "default": "./dist/types/index.js"
+      }
+    },
+    "./validators": {
+      "import": {
+        "types": "./src/validators/index.ts",
+        "default": "./dist/validators/index.js"
+      }
+    },
+    "./constants": {
+      "import": {
+        "types": "./src/constants/index.ts",
+        "default": "./dist/constants/index.js"
+      }
+    },
+    "./utils": {
+      "import": {
+        "types": "./src/utils/index.ts",
+        "default": "./dist/utils/index.js"
+      }
+    }
   },
   "scripts": {
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "test": "vitest run"

@@ -1,0 +1,11 @@
+node_modules
+.trigger
+dist
+.turbo
+.env
+.env.*
+coverage
+__tests__
+*.test.ts
+*.spec.ts
+.DS_Store

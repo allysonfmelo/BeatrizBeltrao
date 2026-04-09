@@ -183,6 +183,7 @@ Escreva em `.claude/napkin.md` continuamente:
 - Sistema de avaliações
 - Agendamento recorrente automático
 - Multi-idiomas (apenas pt-BR)
+- NUNCA EXPOR CHAVES DE API, INFORMAÇÕES DE CONEXÃO DIRETAMENTE NO CHAT
 
 ---
 

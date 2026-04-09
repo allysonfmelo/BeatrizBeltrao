@@ -1,4 +1,4 @@
-import { eq, and, lt, gt, desc, gte, lte } from "drizzle-orm";
+import { eq, and, lt, gt, desc, gte, lte, or, inArray } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
 import { bookings, clients, services } from "@studio/db";
 import { logger } from "../../lib/logger.js";
@@ -28,6 +28,27 @@ export async function createPreBooking(data: CreateBookingDTO) {
   const totalPrice = parseFloat(service.price);
   const depositAmount = Math.round((totalPrice * env.DEPOSIT_PERCENTAGE) / 100 * 100) / 100;
   const endTime = calculateEndTime(data.scheduledTime, service.durationMinutes);
+
+  // Check for overlapping bookings (pendente or confirmado) in the database
+  const conflictingBookings = await db
+    .select()
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.scheduledDate, data.scheduledDate),
+        inArray(bookings.status, ["pendente", "confirmado"]),
+        lt(bookings.scheduledTime, endTime),
+        gt(bookings.endTime, data.scheduledTime)
+      )
+    )
+    .limit(1);
+
+  if (conflictingBookings.length > 0) {
+    const conflict = conflictingBookings[0];
+    throw new Error(
+      `Conflito de horário: já existe agendamento ${conflict.status} das ${conflict.scheduledTime} às ${conflict.endTime} neste dia.`
+    );
+  }
 
   const deadline = new Date();
   deadline.setHours(deadline.getHours() + env.PAYMENT_TIMEOUT_HOURS);
@@ -127,18 +148,15 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
     const totalPrice = parseFloat(booking.totalPrice).toFixed(2);
     const depositAmount = parseFloat(booking.depositAmount).toFixed(2);
 
-    await notificationService.sendWhatsAppMessage(
-      client.phone,
-      [
-        "✨ Agendamento confirmado com sucesso!",
-        `Serviço: ${service.name}`,
-        `Data: ${booking.scheduledDate}`,
-        `Horário: ${booking.scheduledTime}`,
-        `Valor total: R$ ${totalPrice}`,
-        `Sinal pago: R$ ${depositAmount}`,
-        `Forma de pagamento: ${paymentMethodLabel}`,
-      ].join("\n")
-    );
+    await notificationService.sendBookingConfirmationWithImages(client.phone, {
+      clientName: client.fullName,
+      serviceName: service.name,
+      scheduledDate: booking.scheduledDate,
+      scheduledTime: booking.scheduledTime,
+      totalPrice: booking.totalPrice,
+      depositAmount: booking.depositAmount,
+      paymentMethod: paymentMethodLabel,
+    });
 
     await notificationService.sendBookingConfirmationEmail(client.email, {
       clientName: client.fullName,

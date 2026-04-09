@@ -180,6 +180,63 @@
         .nav-load { opacity: 0; transform: translateY(-14px); transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
         .nav-load.loaded { opacity: 1; transform: translateY(0); }
 
+        /* ═══ MOBILE HERO CINEMATIC INTRO ═══ */
+        @media (max-width: 767px) {
+            /* Mobile image starts prominent — scale up, high opacity, no overlay */
+            .hero-mobile-img {
+                transform: scale(1.12);
+                opacity: 0.75;
+                transition: transform 1.8s cubic-bezier(0.16, 1, 0.3, 1),
+                            opacity 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+                transform-origin: center 30%;
+            }
+            .hero-mobile-img.settled {
+                transform: scale(1);
+                opacity: 0.30;
+            }
+            /* Overlay gradient starts transparent, fades in as image recedes */
+            .hero-mobile-overlay {
+                opacity: 0;
+                transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.6s;
+            }
+            .hero-mobile-overlay.settled {
+                opacity: 1;
+            }
+            /* Hero content starts invisible on mobile, fades in after image intro */
+            .hero-content-mobile {
+                opacity: 0;
+                transform: translateY(1.5rem);
+                transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
+                            transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+                transition-delay: 0.8s;
+            }
+            .hero-content-mobile.settled {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            /* Bottom marquee also delayed */
+            .hero-marquee-mobile {
+                opacity: 0;
+                transition: opacity 0.8s ease 1.6s;
+            }
+            .hero-marquee-mobile.settled {
+                opacity: 1;
+            }
+        }
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .hero-mobile-img,
+            .hero-mobile-overlay,
+            .hero-content-mobile,
+            .hero-marquee-mobile {
+                transition: none !important;
+                opacity: unset !important;
+                transform: none !important;
+            }
+            .hero-mobile-img { opacity: 0.30 !important; }
+            .hero-mobile-overlay { opacity: 1 !important; }
+        }
+
         .nav-dropdown {
             position: absolute; top: calc(100% + 10px); left: 50%;
             transform: translateX(-50%) translateY(8px); min-width: 220px; padding: 10px;
@@ -254,6 +311,27 @@
         .anim-float-slow { animation: float-slow 8s ease-in-out infinite; }
         .anim-glow { animation: glow-pulse 4s ease-in-out infinite; }
         .anim-spin { animation: spin-slow 25s linear infinite; }
+
+        /* ═══ INFO BOX GLOW ═══ */
+        .info-box-glow {
+            position: relative; display: block; padding: 2px;
+            border-radius: 1rem; overflow: hidden;
+        }
+        .info-box-glow::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, rgba(212,165,116,0.15), rgba(212,165,116,0.5) 25%, rgba(232,196,184,0.4) 50%, rgba(212,165,116,0.5) 75%, rgba(212,165,116,0.15));
+            background-size: 300% 100%; border-radius: inherit; opacity: 0;
+            animation: pillPulse 4s ease infinite;
+        }
+        .info-box-glow::after {
+            content: ''; position: absolute; inset: 0;
+            border-radius: inherit;
+            box-shadow: 0 0 25px 4px rgba(212,165,116,0.12), 0 0 60px 8px rgba(212,165,116,0.06);
+            opacity: 0; animation: pillPulse 4s ease infinite;
+        }
+        .info-box-glow > * {
+            position: relative; z-index: 1;
+        }
 
         /* ═══ CARD DIVIDER ═══ */
         .card-divider {
@@ -479,8 +557,8 @@
             <nav class="mt-4 md:mt-5 rounded-[20px] glass px-5 md:px-7 py-3.5 md:py-4 flex justify-between items-center shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
                 <!-- Logo -->
                 <a href="#" class="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                    <img src="logo.svg" alt="Logo" class="h-8 md:h-9 w-auto"/>
-                    <span class="font-display text-lg md:text-xl font-bold tracking-tight text-dark-300"><span class="font-serif italic font-semibold text-brand-700">Bia</span> Beltrão</span>
+                    <img src="logo-bia.png" alt="Logo" class="h-8 md:h-9 w-auto"/>
+                    <span class="font-display text-lg md:text-xl font-bold tracking-tight text-dark-300">Bia Beltrão</span>
                 </a>
 
                 <!-- Nav Links (Desktop) -->
@@ -563,15 +641,15 @@
                 <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#EAEAE5]/90 to-transparent"></div>
             </div>
 
-            <!-- Mobile image (full width behind text) -->
-            <div class="absolute inset-0 md:hidden z-0">
-                <img src="fotos/IMG_6466.JPG" alt="Bia Beltrão" class="w-full h-full object-cover object-top opacity-30"/>
-                <div class="absolute inset-0 bg-gradient-to-b from-brand-400/40 via-surface-50/50 to-surface-50"></div>
+            <!-- Mobile image (full width behind text) — cinematic intro -->
+            <div class="absolute inset-0 md:hidden z-0 overflow-hidden">
+                <img src="fotos/IMG_6466.JPG" alt="Bia Beltrão" class="w-full h-full object-cover object-top hero-mobile-img" id="heroMobileImg"/>
+                <div class="absolute inset-0 bg-gradient-to-b from-brand-400/40 via-surface-50/50 to-surface-50 hero-mobile-overlay" id="heroMobileOverlay"></div>
             </div>
         </div>
 
         <!-- Hero Content -->
-        <div class="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12 pt-32 md:pt-44 pb-24 min-h-screen flex flex-col justify-center">
+        <div class="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12 pt-32 md:pt-44 pb-24 min-h-screen flex flex-col justify-center hero-content-mobile" id="heroContent">
             <div class="max-w-[560px]">
 
                 <!-- Animated gradient pill label -->
@@ -624,7 +702,7 @@
         </div>
 
         <!-- Bottom Marquee -->
-        <div class="absolute bottom-0 left-0 right-0 z-10 py-3.5 md:py-4 border-t border-brand-500/[0.08] bg-surface-50/60 backdrop-blur-sm">
+        <div class="absolute bottom-0 left-0 right-0 z-10 py-3.5 md:py-4 border-t border-brand-500/[0.08] bg-surface-50/60 backdrop-blur-sm hero-marquee-mobile" id="heroMarquee">
             <div class="marquee-container">
                 <div class="marquee-content">
                     <span class="text-[10px] font-body font-semibold uppercase tracking-[0.2em] text-brand-500/50 mx-6 md:mx-8">Maquiagem Social</span>
@@ -691,7 +769,9 @@
                     <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
                         <!-- Image carousel -->
                         <img src="fotos/IMG_6459.JPG" alt="Maquiagem Social" class="card-carousel-img active object-center" data-carousel="maq"/>
+                        <img src="fotos/Pinterest/002.jpg" alt="Maquiagem glamour" class="card-carousel-img object-top" data-carousel="maq"/>
                         <img src="fotos/IMG_6468.JPG" alt="Maquiagem divertida" class="card-carousel-img object-top" data-carousel="maq"/>
+                        <img src="fotos/Pinterest/003.jpg" alt="Maquiagem close-up" class="card-carousel-img object-center" data-carousel="maq"/>
                         <img src="fotos/IMG_6490.JPG" alt="Maquiagem produtos" class="card-carousel-img object-top" data-carousel="maq"/>
                         <!-- Gradient overlay — TOP to BOTTOM for text readability -->
                         <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
@@ -715,9 +795,9 @@
                 <!-- Card 2: PENTEADOS (carousel: 3 images) -->
                 <div class="reveal delay-300 group">
                     <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
-                        <img src="fotos/Pinterest/03.jpeg" alt="Penteados" class="card-carousel-img active object-center" data-carousel="pent"/>
-                        <img src="fotos/Pinterest/05.jpeg" alt="Penteado elegante" class="card-carousel-img object-top" data-carousel="pent"/>
-                        <img src="fotos/Pinterest/06.jpeg" alt="Penteado sofisticado" class="card-carousel-img object-top" data-carousel="pent"/>
+                        <img src="fotos/Pinterest/06_copy.jpeg" alt="Penteados" class="card-carousel-img active object-top" data-carousel="pent"/>
+                        <img src="fotos/Pinterest/002.jpg" alt="Penteado glamour" class="card-carousel-img object-top" data-carousel="pent"/>
+                        <img src="fotos/Pinterest/005.jpg" alt="Penteado elegante" class="card-carousel-img object-top" data-carousel="pent"/>
                         <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
                         <div class="absolute inset-0 z-[2] p-6 md:p-8 flex flex-col justify-between">
                             <div>
@@ -739,8 +819,11 @@
                 <div class="reveal delay-400 group">
                     <div class="info-card aspect-[7/9] md:aspect-[7/9] relative overflow-hidden">
                         <img src="fotos/Pinterest/01.jpeg" alt="Noiva B&W" class="card-carousel-img active object-center" data-carousel="noiv"/>
-                        <img src="fotos/Pinterest/02.jpeg" alt="Noiva maquiagem" class="card-carousel-img object-top" data-carousel="noiv"/>
-                        <img src="fotos/Pinterest/04.jpeg" alt="Noiva preparacao" class="card-carousel-img object-center" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/002.jpg" alt="Noiva maquiagem glamour" class="card-carousel-img object-top" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/001.jpg" alt="Noiva aplicação" class="card-carousel-img object-center" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/04.jpeg" alt="Noiva preparação" class="card-carousel-img object-center" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/004.jpg" alt="Noiva véu" class="card-carousel-img object-top" data-carousel="noiv"/>
+                        <img src="fotos/Pinterest/005.jpg" alt="Noiva elegante" class="card-carousel-img object-top" data-carousel="noiv"/>
                         <div class="absolute inset-0 bg-gradient-to-b from-dark-300/90 via-dark-300/40 to-dark-300/15 z-[1]"></div>
                         <div class="absolute inset-0 z-[2] p-6 md:p-8 flex flex-col justify-between">
                             <div>
@@ -813,6 +896,24 @@
                         <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20Maquiagem%20Social%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary">
                             Saiba mais
                             <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                        </a>
+                    </div>
+
+                    <!-- Bia Beltrão Instagram -->
+                    <div class="card-divider w-full mt-8 mb-6"></div>
+                    <div class="reveal delay-600 flex items-center justify-between flex-wrap gap-4">
+                        <a href="https://www.instagram.com/bia.beltrao?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 hover:opacity-70 transition-opacity">
+                            <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center">
+                                <iconify-icon icon="mdi:instagram" class="text-brand-600 text-xl"></iconify-icon>
+                            </div>
+                            <div>
+                                <p class="font-display text-base font-bold text-dark-300">Bia Beltrão</p>
+                                <p class="text-sm text-dark-50">@bia.beltrao</p>
+                            </div>
+                        </a>
+                        <a href="https://www.instagram.com/bia.beltrao?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[12px]">
+                            Seguir no Instagram
+                            <iconify-icon icon="mdi:instagram" class="text-sm"></iconify-icon>
                         </a>
                     </div>
                 </div>
@@ -901,11 +1002,11 @@
             <div class="reveal delay-200">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-0 glass rounded-2xl overflow-hidden shadow-[0_2.8px_2.2px_rgba(0,0,0,0.02),0_6.7px_5.3px_rgba(0,0,0,0.028),0_12.5px_10px_rgba(0,0,0,0.035),0_22.3px_17.9px_rgba(0,0,0,0.042),0_41.8px_33.4px_rgba(0,0,0,0.05),0_100px_80px_rgba(0,0,0,0.07)]">
                     <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-100">
-                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">500+</div>
-                        <div class="text-sm font-body text-dark-50">Noivas atendidas</div>
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">1000+</div>
+                        <div class="text-sm font-body text-dark-50">Atendimentos sociais</div>
                     </div>
                     <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-200">
-                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">10+</div>
+                        <div class="font-display text-3xl md:text-4xl font-bold text-gradient-brand mb-1">3+</div>
                         <div class="text-sm font-body text-dark-50">Anos de experiência</div>
                     </div>
                     <div class="text-center p-6 md:p-8 border-r border-brand-500/[0.08] reveal delay-300">
@@ -1014,7 +1115,7 @@
                             <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Maquiagem à prova d'água</li>
                             <li class="flex items-start gap-3 text-base text-white"><span class="w-6 h-6 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0 mt-0.5"><iconify-icon class="text-brand-400 text-xs" icon="solar:check-read-linear"></iconify-icon></span>Aplicação de véu e grinalda</li>
                         </ul>
-                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !text-white !border-white/20 !bg-white/[0.07] hover:!bg-white/[0.12] w-full text-center">
+                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20or%C3%A7amento%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !text-white !border-white/20 !bg-white/[0.07] hover:!bg-white/[0.12] w-full text-center">
                             Agendar consultoria <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
                         </a>
                     </div>
@@ -1066,19 +1167,21 @@
 
             <!-- Bottom info + CTA -->
             <div class="text-center reveal delay-300">
-                <div class="glass-dark rounded-2xl p-6 md:p-8 max-w-[600px] mx-auto mb-8">
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0">
-                            <iconify-icon class="text-brand-400 text-lg" icon="solar:info-circle-bold"></iconify-icon>
-                        </div>
-                        <div class="text-left">
-                            <p class="font-display text-base font-bold text-white mb-1">Reserva de Data</p>
-                            <p class="text-sm text-white/70 leading-relaxed">A data só será reservada mediante pagamento de 30% do valor na assinatura do contrato. O valor pode ser parcelado no cartão.</p>
+                <div class="info-box-glow max-w-[600px] mx-auto mb-8">
+                    <div class="glass-dark rounded-2xl p-6 md:p-8">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center flex-shrink-0">
+                                <iconify-icon class="text-brand-400 text-lg" icon="solar:info-circle-bold"></iconify-icon>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-display text-base font-bold text-white mb-1">Reserva de Data</p>
+                                <p class="text-sm text-white/70 leading-relaxed">A data só será reservada mediante pagamento de 30% do valor na assinatura do contrato. O valor pode ser parcelado no cartão.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consultoria%20para%20noivas%20%F0%9F%92%84" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !bg-gradient-to-r !from-brand-700 !to-brand-500 !border-brand-500/50 inline-flex">
-                    Agendar Consultoria Noivas
+                <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20or%C3%A7amento%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !bg-gradient-to-r !from-brand-700 !to-brand-500 !border-brand-500/50 inline-flex">
+                    Agendar Orçamento
                     <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
                 </a>
             </div>
@@ -1121,8 +1224,7 @@
                     <div class="penteado-card aspect-[3/4] relative">
                         <!-- Carousel images from PDF page 2 + Pinterest -->
                         <img src="fotos/Pinterest/05.jpeg" alt="Penteado elegante" class="card-carousel-img active object-top" data-carousel="pent1"/>
-                        <img src="fotos/Pinterest/06.jpeg" alt="Coque sofisticado" class="card-carousel-img object-top" data-carousel="pent1"/>
-                        <img src="fotos/Pinterest/03.jpeg" alt="Updo cacheado" class="card-carousel-img object-center" data-carousel="pent1"/>
+                        <img src="fotos/Pinterest/002.jpg" alt="Penteado glamour" class="card-carousel-img object-top" data-carousel="pent1"/>
                         <!-- Gradient overlay bottom -->
                         <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
                         <!-- Content -->
@@ -1146,8 +1248,7 @@
                 <div class="penteado-scroll-item reveal delay-300 group">
                     <div class="penteado-card aspect-[3/4] relative">
                         <img src="fotos/Pinterest/03.jpeg" alt="Cacheado updo" class="card-carousel-img active object-center" data-carousel="pent2"/>
-                        <img src="fotos/IMG_6491.JPG" alt="Penteado elegante B&W" class="card-carousel-img object-top" data-carousel="pent2"/>
-                        <img src="fotos/Pinterest/05.jpeg" alt="Coque lateral" class="card-carousel-img object-top" data-carousel="pent2"/>
+                        <img src="fotos/Pinterest/06_copy.jpeg" alt="Penteado elegante" class="card-carousel-img object-top" data-carousel="pent2"/>
                         <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
                         <div class="absolute bottom-0 left-0 right-0 z-[2] p-6 md:p-8">
                             <div class="pill-highlight !text-[12px] !py-2 !px-4 !rounded-xl mb-4">
@@ -1169,8 +1270,7 @@
                 <div class="penteado-scroll-item reveal delay-400 group">
                     <div class="penteado-card aspect-[3/4] relative">
                         <img src="fotos/Pinterest/06.jpeg" alt="Escova modelada" class="card-carousel-img active object-top" data-carousel="pent3"/>
-                        <img src="fotos/Pinterest/05.jpeg" alt="Babyliss elegante" class="card-carousel-img object-top" data-carousel="pent3"/>
-                        <img src="fotos/IMG_6482.JPG" alt="Bia styling" class="card-carousel-img object-center" data-carousel="pent3"/>
+                        <img src="fotos/Pinterest/005.jpg" alt="Coque elegante" class="card-carousel-img object-top" data-carousel="pent3"/>
                         <div class="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/30 to-transparent z-[1]"></div>
                         <div class="absolute bottom-0 left-0 right-0 z-[2] p-6 md:p-8">
                             <div class="pill-highlight !text-[12px] !py-2 !px-4 !rounded-xl mb-4">
@@ -1232,7 +1332,7 @@
                     <!-- Kelly Silva Instagram -->
                     <div class="card-divider w-full mt-8 mb-6"></div>
                     <div class="flex items-center justify-between flex-wrap gap-4">
-                        <div class="flex items-center gap-3">
+                        <a href="https://www.instagram.com/kelly.silvaprofissional/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 hover:opacity-70 transition-opacity">
                             <div class="w-10 h-10 rounded-full bg-brand-400/15 flex items-center justify-center">
                                 <iconify-icon icon="mdi:instagram" class="text-brand-600 text-xl"></iconify-icon>
                             </div>
@@ -1240,11 +1340,17 @@
                                 <p class="font-display text-base font-bold text-dark-300">Kelly Silva</p>
                                 <p class="text-sm text-dark-50">@kelly.silvaprofissional</p>
                             </div>
-                        </div>
-                        <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20penteado%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary">
-                            Agendar Penteado
-                            <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
                         </a>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="https://www.instagram.com/kelly.silvaprofissional/" target="_blank" rel="noopener noreferrer" class="btn-glass-secondary !py-2.5 !px-5 !text-[12px]">
+                                Seguir no Instagram
+                                <iconify-icon icon="mdi:instagram" class="text-sm"></iconify-icon>
+                            </a>
+                            <a href="https://wa.me/5581951680117?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20um%20penteado%20%E2%9C%A8" target="_blank" rel="noopener noreferrer" class="btn-glass-primary !py-2.5 !px-5 !text-[12px]">
+                                Agendar Penteado
+                                <iconify-icon icon="solar:arrow-right-linear" class="text-sm"></iconify-icon>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1393,10 +1499,10 @@
             <!-- Brand -->
             <div class="text-center mb-10 reveal">
                 <div class="flex justify-center mb-4">
-                    <img src="logo.svg" alt="Logo Studio Beatriz Beltrão" class="h-16 md:h-20 w-auto"/>
+                    <img src="logo-bia.png" alt="Logo Studio Beatriz Beltrão" class="h-16 md:h-20 w-auto"/>
                 </div>
                 <h2 class="font-display text-5xl md:text-7xl font-bold tracking-tight text-dark-300 mb-2">
-                    <span class="font-serif italic font-semibold text-brand-700">Bia</span> Beltrão
+                    Bia Beltrão
                 </h2>
                 <p class="text-base text-dark-50 font-body">Beauty Studio</p>
             </div>
@@ -1444,16 +1550,49 @@
         // 1. Nav entrance
         setTimeout(() => document.querySelector('header').classList.add('loaded'), 250);
 
-        // 2. Hero text reveal
-        setTimeout(() => {
-            const t = document.getElementById('hero-title');
-            if (t) t.classList.add('text-revealed');
-        }, 700);
+        // 1b. Mobile hero cinematic intro
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        // 3. Hero elements reveal
-        setTimeout(() => {
-            document.querySelectorAll('.hero-el').forEach(el => el.classList.add('active'));
-        }, 900);
+        if (isMobile && !prefersReduced) {
+            // Phase 1 (0.4s): Image is already visible & prominent (CSS initial state)
+            // Phase 2 (1.2s): Image settles back, overlay + content fade in
+            setTimeout(() => {
+                const img = document.getElementById('heroMobileImg');
+                const overlay = document.getElementById('heroMobileOverlay');
+                const content = document.getElementById('heroContent');
+                const marquee = document.getElementById('heroMarquee');
+                if (img) img.classList.add('settled');
+                if (overlay) overlay.classList.add('settled');
+                if (content) content.classList.add('settled');
+                if (marquee) marquee.classList.add('settled');
+            }, 1200);
+
+            // Hero text reveal delayed for mobile cinematic sequence
+            setTimeout(() => {
+                const t = document.getElementById('hero-title');
+                if (t) t.classList.add('text-revealed');
+            }, 1800);
+            setTimeout(() => {
+                document.querySelectorAll('.hero-el').forEach(el => el.classList.add('active'));
+            }, 2000);
+        } else {
+            // 2. Desktop: Hero text reveal (original timing)
+            setTimeout(() => {
+                const t = document.getElementById('hero-title');
+                if (t) t.classList.add('text-revealed');
+            }, 700);
+
+            // 3. Desktop: Hero elements reveal
+            setTimeout(() => {
+                document.querySelectorAll('.hero-el').forEach(el => el.classList.add('active'));
+            }, 900);
+
+            // Ensure mobile elements are visible on desktop (no cinematic classes)
+            document.querySelectorAll('.hero-content-mobile, .hero-marquee-mobile').forEach(el => {
+                el.classList.add('settled');
+            });
+        }
 
         // 4. Scroll observer for future sections
         const obs = new IntersectionObserver((entries) => {
@@ -1483,20 +1622,72 @@
             });
         });
 
-        // 6. Card image carousels (crossfade every 3s)
+        // 6. Card image carousels (crossfade with anti-collision)
+        // Carousels that are co-visible must never show the same image simultaneously
+        const coVisibleGroups = [
+            ['maq', 'pent', 'noiv'],
+            ['pent1', 'pent2', 'pent3']
+        ];
+
         const carouselGroups = {};
+        const carouselState = {}; // track current index per carousel
         document.querySelectorAll('.card-carousel-img').forEach(img => {
             const id = img.dataset.carousel;
             if (!carouselGroups[id]) carouselGroups[id] = [];
             carouselGroups[id].push(img);
         });
-        Object.values(carouselGroups).forEach(imgs => {
-            let current = 0;
-            setInterval(() => {
-                imgs[current].classList.remove('active');
-                current = (current + 1) % imgs.length;
-                imgs[current].classList.add('active');
-            }, 3500);
+
+        // Initialize state
+        Object.keys(carouselGroups).forEach(id => {
+            carouselState[id] = 0;
+        });
+
+        // Find which co-visible group a carousel belongs to
+        function getCoVisiblePeers(carouselId) {
+            const group = coVisibleGroups.find(g => g.includes(carouselId));
+            return group ? group.filter(id => id !== carouselId) : [];
+        }
+
+        // Get image filenames currently active in peer carousels
+        function getActivePeerSrcs(carouselId) {
+            const peers = getCoVisiblePeers(carouselId);
+            const srcs = new Set();
+            peers.forEach(peerId => {
+                const imgs = carouselGroups[peerId];
+                if (!imgs) return;
+                const idx = carouselState[peerId];
+                // Extract filename from src for comparison
+                srcs.add(imgs[idx].getAttribute('src'));
+            });
+            return srcs;
+        }
+
+        function rotateCarousel(id) {
+            const imgs = carouselGroups[id];
+            if (!imgs || imgs.length <= 1) return;
+
+            const oldIdx = carouselState[id];
+            imgs[oldIdx].classList.remove('active');
+
+            let next = (oldIdx + 1) % imgs.length;
+            const activeSrcs = getActivePeerSrcs(id);
+
+            // Skip images that are currently showing in a peer carousel
+            let attempts = 0;
+            while (activeSrcs.has(imgs[next].getAttribute('src')) && attempts < imgs.length - 1) {
+                next = (next + 1) % imgs.length;
+                attempts++;
+            }
+
+            carouselState[id] = next;
+            imgs[next].classList.add('active');
+        }
+
+        // Stagger intervals per group to reduce transition overlap
+        const intervals = { maq: 3500, pent: 4000, noiv: 4500, pent1: 3500, pent2: 4000, pent3: 4500 };
+        Object.keys(carouselGroups).forEach(id => {
+            const delay = intervals[id] || 3500;
+            setInterval(() => rotateCarousel(id), delay);
         });
 
         // 7. Mobile menu

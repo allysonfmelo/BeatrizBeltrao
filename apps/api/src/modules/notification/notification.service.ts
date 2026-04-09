@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { readFile } from "node:fs/promises";
-import { sendTextMessage, sendDocument } from "../../lib/evolution.js";
+import { sendTextMessage, sendDocument, sendImage } from "../../lib/evolution.js";
 import { sendEmail } from "../../lib/resend.js";
 import { db } from "../../config/supabase.js";
 import { messages } from "@studio/db";
@@ -66,7 +66,7 @@ export async function sendWhatsAppMessage(
 }
 
 /**
- * Sends Sophia replies in short chunks and logs every outbound chunk.
+ * Sends Sophia reply as a single message and logs it.
  * This is used only by the Sophia conversational flow.
  */
 export async function sendSophiaMessage(
@@ -74,28 +74,25 @@ export async function sendSophiaMessage(
   content: string,
   conversationId?: string
 ): Promise<string[]> {
-  const chunks = splitSophiaMessage(content);
-  const messageIds: string[] = [];
+  const trimmed = content.trim();
+  if (!trimmed) return [];
 
-  for (const chunk of chunks) {
-    const evolutionMsgId = await sendTextMessage(phone, chunk);
-    messageIds.push(evolutionMsgId);
+  const evolutionMsgId = await sendTextMessage(phone, trimmed);
+  const messageIds = [evolutionMsgId];
 
-    if (conversationId) {
-      await db.insert(messages).values({
-        conversationId,
-        role: "sophia",
-        content: chunk,
-        messageType: "text",
-        evolutionMessageId: evolutionMsgId,
-      });
-    }
+  if (conversationId) {
+    await db.insert(messages).values({
+      conversationId,
+      role: "sophia",
+      content: trimmed,
+      messageType: "text",
+      evolutionMessageId: evolutionMsgId,
+    });
   }
 
   logger.info("Sophia WhatsApp response sent", {
     phone,
     conversationId,
-    chunks: chunks.length,
   });
 
   return messageIds;
@@ -216,4 +213,84 @@ export async function notifyMaquiadora(
   }
 
   logger.info("Maquiadora notified", { subject });
+}
+
+/** Data needed for booking confirmation with images */
+interface BookingConfirmationWithImagesData {
+  clientName: string;
+  serviceName: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  totalPrice: string;
+  depositAmount: string;
+  paymentMethod: string;
+}
+
+/**
+ * Sends booking confirmation with branded images + informational text via WhatsApp.
+ * Called after ASAAS payment is confirmed.
+ */
+export async function sendBookingConfirmationWithImages(
+  phone: string,
+  data: BookingConfirmationWithImagesData
+): Promise<void> {
+  const { resolve, join } = await import("node:path");
+
+  const assetsDir = resolve(join(import.meta.dirname, "../../../../assets/confirmacao"));
+
+  // 1. Send "Agendamento Confirmado" image with booking details
+  const confirmImgBuffer = await readFile(join(assetsDir, "agendamento-confirmado.png"));
+  const confirmMedia = `data:image/png;base64,${confirmImgBuffer.toString("base64")}`;
+
+  const totalPrice = parseFloat(data.totalPrice).toFixed(2);
+  const depositAmount = parseFloat(data.depositAmount).toFixed(2);
+  const remainingAmount = (parseFloat(data.totalPrice) - parseFloat(data.depositAmount)).toFixed(2);
+
+  const confirmCaption = [
+    "✨ AGENDAMENTO CONFIRMADO",
+    "",
+    "DADOS DA CLIENTE",
+    `NOME: ${data.clientName}`,
+    `DATA: ${data.scheduledDate}`,
+    `HORÁRIO: ${data.scheduledTime}`,
+    "",
+    "✨ AGENDAMENTO",
+    `💳 Agendamento: R$${depositAmount}`,
+    `💰 Pagamento no dia: R$${remainingAmount}`,
+    "",
+    "⏳ O pagamento do sinal foi confirmado com sucesso!",
+    "Sua data está reservada 🤍",
+  ].join("\n");
+
+  await sendImage(phone, confirmMedia, confirmCaption);
+
+  // 2. Send "Aviso" image with address + care instructions
+  const avisoImgBuffer = await readFile(join(assetsDir, "aviso.png"));
+  const avisoMedia = `data:image/png;base64,${avisoImgBuffer.toString("base64")}`;
+
+  const avisoCaption = [
+    "📍 *Nosso endereço:*",
+    "Empresarial Quartier",
+    "Estrada do Arraial, 2483",
+    "Sala 1405, 14° andar",
+    "Ponto de referência: em frente à Padaria Cidade Jardim.",
+    "",
+    "🅿️ *Estacionamento*: pago (segunda a sexta). A partir das 20h e sábados a partir das 12h fica gratuito. Pode estacionar na rua da frente também.",
+    "",
+    "📍 https://maps.app.goo.gl/R244R9ofY9CufA539",
+    "",
+    "🎨 *SOBRE MAQUIAGEM:*",
+    "➡️ Vir com rosto limpo e sem protetor solar",
+    "",
+    "💇‍♀️ *SOBRE CABELO:*",
+    "➡️ Cabelos limpos e secos, lavados apenas com shampoo (isso influencia na durabilidade do penteado)",
+    "➡️ Não utilizar óleo, apenas protetor térmico",
+    "➡️ Cacheadas: cabelos secos e limpos, finalizar apenas com geleia (não utilizar creme)",
+    "",
+    `Te espero, com carinho, ${data.clientName.split(" ")[0]}! 🤍`,
+  ].join("\n");
+
+  await sendImage(phone, avisoMedia, avisoCaption);
+
+  logger.info("Booking confirmation images sent", { phone, service: data.serviceName });
 }

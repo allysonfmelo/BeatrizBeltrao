@@ -55,7 +55,7 @@ export const sophiaTools: LlmTool[] = [
     type: "function",
     function: {
       name: "save_client_data",
-      description: "Salva dados da cliente incrementalmente (nome, CPF, email). Chame sempre que coletar um dado novo.",
+      description: "Salva dados da cliente (nome, CPF, email). Chame SEM parâmetros para verificar se já existe cadastro pelo telefone. Chame COM parâmetros para salvar dados novos.",
       parameters: {
         type: "object",
         properties: {
@@ -289,6 +289,37 @@ async function executeSaveClientData(
   ctx: ToolExecutionContext,
   data: { fullName?: string; cpf?: string; email?: string }
 ): Promise<string> {
+  // If no data provided, do a lookup by phone to check existing client
+  if (!data.fullName && !data.cpf && !data.email) {
+    const existingClient = await clientService.findByPhone(ctx.phone);
+    if (existingClient) {
+      await sophiaContext.linkClient(ctx.conversationId, existingClient.id);
+      ctx.clientId = existingClient.id;
+
+      const cpfMasked = existingClient.cpf
+        ? `${existingClient.cpf.slice(0, 3)}.***.***.${existingClient.cpf.slice(-2)}`
+        : "não informado";
+
+      return JSON.stringify({
+        success: true,
+        message: "Cliente já cadastrada! Confirme os dados com ela antes de prosseguir.",
+        existingClient: {
+          id: existingClient.id,
+          fullName: existingClient.fullName,
+          cpf: cpfMasked,
+          email: existingClient.email,
+          phone: existingClient.phone,
+        },
+      });
+    }
+
+    return JSON.stringify({
+      success: true,
+      message: "Nenhum cadastro encontrado para este telefone. Solicite os dados da cliente: nome completo, CPF e email.",
+      existingClient: null,
+    });
+  }
+
   const updates: Record<string, unknown> = {};
 
   if (data.fullName) updates.clientName = data.fullName;
@@ -378,18 +409,50 @@ async function executeCreateBooking(
   );
 
   if (!available) {
+    const alternativeSlots = await calendarService.getAvailableSlots(
+      data.scheduledDate,
+      service.durationMinutes
+    );
+
     return JSON.stringify({
-      error: "Horário não disponível. Verifique outros horários com check_availability.",
+      error: `O horário ${data.scheduledTime} não está disponível no dia ${data.scheduledDate}.`,
+      suggestion: "Apresente os horários disponíveis abaixo à cliente e pergunte qual prefere.",
+      available_slots: alternativeSlots.map((s) => s.start),
+      no_slots_message:
+        alternativeSlots.length === 0
+          ? "Nenhum horário disponível neste dia. Sugira outra data à cliente."
+          : null,
     });
   }
 
-  // Create pre-booking
-  const booking = await bookingService.createPreBooking({
-    clientId: ctx.clientId,
-    serviceId: data.serviceId,
-    scheduledDate: data.scheduledDate,
-    scheduledTime: data.scheduledTime,
-  });
+  // Create pre-booking (also validates conflicts in database)
+  let booking;
+  try {
+    booking = await bookingService.createPreBooking({
+      clientId: ctx.clientId,
+      serviceId: data.serviceId,
+      scheduledDate: data.scheduledDate,
+      scheduledTime: data.scheduledTime,
+    });
+  } catch (bookingError) {
+    const errorMsg = bookingError instanceof Error ? bookingError.message : "Erro ao criar agendamento";
+    logger.warn("Booking creation failed, fetching alternatives", { error: errorMsg });
+
+    const alternativeSlots = await calendarService.getAvailableSlots(
+      data.scheduledDate,
+      service.durationMinutes
+    );
+
+    return JSON.stringify({
+      error: errorMsg,
+      suggestion: "Apresente os horários disponíveis abaixo à cliente e pergunte qual prefere.",
+      available_slots: alternativeSlots.map((s) => s.start),
+      no_slots_message:
+        alternativeSlots.length === 0
+          ? "Nenhum horário disponível neste dia. Sugira outra data à cliente."
+          : null,
+    });
+  }
 
   // Create payment charge
   const client = await clientService.findById(ctx.clientId);

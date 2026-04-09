@@ -58,14 +58,26 @@ const envSchema = z.object({
   SENTRY_PROJECT: z.string().optional(),
 });
 
-function loadEnv() {
+let _env: z.infer<typeof envSchema> | null = null;
+
+function loadEnv(): z.infer<typeof envSchema> {
+  if (_env) return _env;
+
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     console.error("Invalid environment variables:", result.error.flatten().fieldErrors);
     throw new Error("Invalid environment variables");
   }
-  return result.data;
+  _env = result.data;
+  return _env;
 }
 
-export const env = loadEnv();
+/** Lazy-loaded env — validates on first access, not on import.
+ *  This allows Trigger.dev indexer to discover tasks without requiring all env vars at build time.
+ */
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_target, prop: string) {
+    return loadEnv()[prop as keyof z.infer<typeof envSchema>];
+  },
+});
 export type Env = z.infer<typeof envSchema>;
