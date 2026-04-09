@@ -8,7 +8,10 @@ import { logger } from "../lib/logger.js";
  */
 export const expireOverdueBookingsTask = schedules.task({
   id: "expire-overdue-bookings",
-  cron: "*/5 * * * *",
+  cron: {
+    pattern: "*/15 5-23 * * *",
+    timezone: "America/Sao_Paulo",
+  },
   run: async () => {
     logger.info("Running scheduled booking expiration check");
 

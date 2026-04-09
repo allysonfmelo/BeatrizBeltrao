@@ -15,7 +15,10 @@ const REMINDER_PREFIX = "reminder:";
  */
 export const sendPaymentReminderTask = schedules.task({
   id: "send-payment-reminder",
-  cron: "*/5 * * * *",
+  cron: {
+    pattern: "*/30 5-23 * * *",
+    timezone: "America/Sao_Paulo",
+  },
   run: async () => {
     const now = new Date();
     let remindersSent = 0;
