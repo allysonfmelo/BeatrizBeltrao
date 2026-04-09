@@ -10,7 +10,6 @@ import * as notificationService from "../notification/notification.service.js";
 import {
   getReferenceServices,
   getServiceReference,
-  type CatalogTopic,
 } from "../service/service-reference.service.js";
 import { logger } from "../../lib/logger.js";
 
@@ -114,18 +113,12 @@ export const sophiaTools: LlmTool[] = [
   {
     type: "function",
     function: {
-      name: "send_service_pdf",
-      description: "Envia no WhatsApp o catálogo PDF por tema quando a cliente aceitar receber o material.",
+      name: "send_website_link",
+      description: "Envia no WhatsApp o link do site com informações detalhadas sobre os serviços, fotos e detalhes completos.",
       parameters: {
         type: "object",
-        properties: {
-          topic: {
-            type: "string",
-            description: "Tema do PDF: maquiagem, penteado ou noivas",
-            enum: ["maquiagem", "penteado", "noivas"],
-          },
-        },
-        required: ["topic"],
+        properties: {},
+        required: [],
       },
     },
   },
@@ -187,8 +180,8 @@ export async function executeTool(
       case "handoff_to_human":
         return await executeHandoff(ctx, args.reason as string);
 
-      case "send_service_pdf":
-        return await executeSendServicePdf(ctx, args.topic as string);
+      case "send_website_link":
+        return await executeSendWebsiteLink(ctx);
 
       default:
         return JSON.stringify({ error: `Ferramenta desconhecida: ${toolCall.name}` });
@@ -574,37 +567,30 @@ async function executeHandoff(
   });
 }
 
-function normalizePdfTopic(topic: string): CatalogTopic | null {
-  const value = topic.trim().toLowerCase();
+const WEBSITE_URL = "https://biabeltrao.com.br";
 
-  if (value === "maquiagem") return "maquiagem";
-  if (value === "penteado") return "penteado";
-  if (value === "noiva" || value === "noivas") return "noivas";
-
-  return null;
-}
-
-async function executeSendServicePdf(
-  ctx: ToolExecutionContext,
-  topicArg: string
+async function executeSendWebsiteLink(
+  ctx: ToolExecutionContext
 ): Promise<string> {
-  const topic = normalizePdfTopic(topicArg);
-  if (!topic) {
-    return JSON.stringify({
-      error: "Tema de PDF inválido. Use: maquiagem, penteado ou noivas.",
-    });
-  }
+  const message = [
+    "✨ Confira nosso site com todas as informações sobre nossos serviços:",
+    "",
+    `🌐 ${WEBSITE_URL}`,
+    "",
+    "Lá você encontra detalhes sobre maquiagem, penteados, pacotes para noivas e muito mais! 💄",
+    "",
+    "Se tiver alguma dúvida, é só me chamar aqui! 💕",
+  ].join("\n");
 
-  await notificationService.sendWhatsAppServicePdf(
+  await notificationService.sendWhatsAppMessage(
     ctx.phone,
-    topic,
-    ctx.conversationId,
-    "Segue o catálogo para você consultar com calma ✨"
+    message,
+    ctx.conversationId
   );
 
   return JSON.stringify({
     success: true,
-    topic,
-    message: "Catálogo enviado com sucesso no WhatsApp.",
+    url: WEBSITE_URL,
+    message: "Link do site enviado com sucesso no WhatsApp.",
   });
 }

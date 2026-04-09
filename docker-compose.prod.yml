@@ -31,7 +31,7 @@ services:
       labels:
         - traefik.enable=true
         - traefik.docker.network=network_swarm_public
-        - traefik.http.routers.bb-api.rule=Host(`api.studiobeatrizbeltrao.com.br`)
+        - traefik.http.routers.bb-api.rule=Host(`api.biabeltrao.com.br`) || Host(`api.studiobeatrizbeltrao.com.br`)
         - traefik.http.routers.bb-api.entrypoints=websecure
         - traefik.http.routers.bb-api.tls.certresolver=letsencryptresolver
         - traefik.http.services.bb-api.loadbalancer.server.port=3001
