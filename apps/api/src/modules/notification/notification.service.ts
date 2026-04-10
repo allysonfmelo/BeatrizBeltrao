@@ -19,6 +19,24 @@ const MAX_CHUNKS = 3;
 const STRUCTURED_BLOCK_RE = /^(✨\s*(PRE-AGENDAMENTO|AGENDAMENTO)|DADOS DA CLIENTE|PAGAMENTO|Vou confirmar seus dados)/;
 
 /**
+ * Test phone prefix: conversations coming from numbers starting with this
+ * prefix are treated as internal test scenarios. For these:
+ *   - Sophia's replies are persisted to the DB as normal (so the test harness
+ *     can poll the `messages` table and assemble the transcript).
+ *   - The actual Evolution API send is SKIPPED, because these numbers don't
+ *     exist on real WhatsApp and Evolution rejects them with HTTP 400
+ *     ("jid exists: false"), which crashes the whole Trigger.dev run and
+ *     prevents the DB log from being written.
+ * The prefix "5500099" is not a valid Brazilian DDD (all start with 1–9),
+ * so there is zero risk of colliding with real clients.
+ */
+const TEST_PHONE_PREFIX = "5500099";
+
+function isTestPhone(phone: string): boolean {
+  return phone.startsWith(TEST_PHONE_PREFIX);
+}
+
+/**
  * Splits a Sophia reply into natural WhatsApp-sized chunks.
  *
  * Rules:
@@ -81,6 +99,22 @@ export async function sendWhatsAppMessage(
   content: string,
   conversationId?: string
 ): Promise<string> {
+  // Test phones: persist to DB but skip Evolution (prefix is not a real WhatsApp number).
+  if (isTestPhone(phone)) {
+    const fakeMsgId = `test_${Date.now()}`;
+    if (conversationId) {
+      await db.insert(messages).values({
+        conversationId,
+        role: "sophia",
+        content,
+        messageType: "text",
+        evolutionMessageId: fakeMsgId,
+      });
+    }
+    logger.info("WhatsApp message persisted (test phone — Evolution send skipped)", { phone, conversationId });
+    return fakeMsgId;
+  }
+
   const evolutionMsgId = await sendTextMessage(phone, content);
 
   if (conversationId) {
@@ -111,6 +145,32 @@ export async function sendSophiaMessage(
   if (!trimmed) return [];
 
   const chunks = splitSophiaMessage(trimmed);
+
+  // Test phones: persist to DB but skip Evolution send (number is not on real WhatsApp).
+  // This keeps the test harness flow intact — the `messages` table still receives
+  // Sophia's response, so the polling loop in sophia-test-client.ts sees it.
+  if (isTestPhone(phone)) {
+    const fakeMessageIds = chunks.map((_, i) => `test_${Date.now()}_${i}`);
+
+    if (conversationId) {
+      await db.insert(messages).values({
+        conversationId,
+        role: "sophia",
+        content: trimmed,
+        messageType: "text",
+        evolutionMessageId: fakeMessageIds[0],
+      });
+    }
+
+    logger.info("Sophia response persisted (test phone — Evolution send skipped)", {
+      phone,
+      conversationId,
+      chunks: chunks.length,
+    });
+
+    return fakeMessageIds;
+  }
+
   const messageIds: string[] = [];
 
   for (const chunk of chunks) {
