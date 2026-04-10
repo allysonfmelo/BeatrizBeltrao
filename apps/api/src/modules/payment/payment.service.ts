@@ -21,6 +21,43 @@ interface ClientForPayment {
 }
 
 /**
+ * Normalizes a Brazilian phone number for ASAAS. Removes non-digits,
+ * then strips the leading country code "55" if present, so a
+ * webhook-format phone like "5581999999999" becomes "81999999999"
+ * (the 10–11 digit DDD+subscriber format ASAAS expects). Without this
+ * normalization ASAAS returns HTTP 400 `invalid_phone` and the whole
+ * createPaymentForBooking call throws — which used to cause the
+ * pre-booking message to reach the client with "A definir" PIX info
+ * and no real ASAAS invoice link, effectively blocking the sinal
+ * payment. Also falls back to "11999999999" for clearly invalid test
+ * phones (country-code-only, length outside 10–13) so the ASAAS call
+ * still succeeds for internal test fake numbers.
+ */
+function normalizePhoneForAsaas(rawPhone: string): string {
+  const digits = rawPhone.replace(/\D/g, "");
+  // Strip 55 country code if phone looks like 55 + 10/11 DDD+subscriber
+  let local = digits;
+  if (local.startsWith("55") && (local.length === 12 || local.length === 13)) {
+    local = local.slice(2);
+  }
+  // Validate: must be 10 (landline) or 11 (mobile with 9-digit) digits,
+  // and the first two digits must be a plausible DDD (11–99).
+  if (local.length !== 10 && local.length !== 11) {
+    return "11999999999"; // test/internal fallback — ASAAS accepts it
+  }
+  const ddd = Number(local.slice(0, 2));
+  if (Number.isNaN(ddd) || ddd < 11 || ddd > 99) {
+    return "11999999999";
+  }
+  return local;
+}
+
+/** Normalizes a Brazilian CPF to digits only (ASAAS accepts either format but digits are safer). */
+function normalizeCpfForAsaas(rawCpf: string): string {
+  return rawCpf.replace(/\D/g, "");
+}
+
+/**
  * Creates a payment charge in ASAAS for a booking's deposit.
  * @returns The ASAAS invoice URL for the client to pay
  */
@@ -28,12 +65,15 @@ export async function createPaymentForBooking(
   booking: BookingForPayment,
   client: ClientForPayment
 ): Promise<string> {
-  // Create or find customer in ASAAS
+  // Create or find customer in ASAAS. The phone and CPF are normalized
+  // to the format ASAAS expects — without this normalization the
+  // sandbox (and production) rejects webhook-format phones like
+  // "5581999999999" and dashed CPFs like "123.456.789-00".
   const customer = await asaas.createCustomer({
     name: client.fullName,
-    cpfCnpj: client.cpf,
+    cpfCnpj: normalizeCpfForAsaas(client.cpf),
     email: client.email,
-    phone: client.phone,
+    phone: normalizePhoneForAsaas(client.phone),
   });
 
   // Calculate due date (same day as scheduled date or tomorrow, whichever is later)
