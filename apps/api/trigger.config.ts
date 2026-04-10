@@ -69,6 +69,7 @@ export default defineConfig({
           "EVOLUTION_API_KEY",
           "EVOLUTION_INSTANCE_NAME",
           "GOOGLE_SERVICE_ACCOUNT_KEY_PATH",
+          "GOOGLE_SERVICE_ACCOUNT_JSON",
           "GOOGLE_CALENDAR_ID",
           "ASAAS_API_KEY",
           "ASAAS_WEBHOOK_TOKEN",

@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "../config/env.js";
@@ -23,20 +23,101 @@ export interface CalendarEventInput {
 
 const TIMEZONE = "America/Sao_Paulo";
 
-/** Loads Service Account credentials and returns an authenticated calendar client */
-function getCalendarClient() {
-  const keyPath = env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+/**
+ * Resolves the Google Service Account JSON credentials, trying multiple
+ * strategies in order:
+ *   1. GOOGLE_SERVICE_ACCOUNT_JSON env var (raw JSON string) — the most
+ *      portable option, avoids filesystem path resolution entirely.
+ *   2. Absolute path from GOOGLE_SERVICE_ACCOUNT_KEY_PATH.
+ *   3. Relative path GOOGLE_SERVICE_ACCOUNT_KEY_PATH resolved against a
+ *      list of candidate roots (mirroring the pattern used for
+ *      service-reference.yaml in `service-reference.service.ts`):
+ *        a) `process.cwd()` + keyPath  — most common in Docker (WORKDIR)
+ *           and in Trigger.dev workers where additionalFiles land at cwd.
+ *        b) fileURLToPath(new URL('.', import.meta.url)) + 2 ups — matches
+ *           API container layout `/app/dist/lib/`.
+ *        c) fileURLToPath(new URL('.', import.meta.url)) + 4 ups — matches
+ *           local dev from `apps/api/src/lib/` to repo root.
+ *        d) Absolute `/app/${keyPath}` — final fallback for Docker.
+ * Throws with a helpful message listing all tried paths if none worked.
+ */
+let cachedKeyFile: { client_email: string; private_key: string } | null = null;
 
-  if (!keyPath) {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY_PATH is not configured");
+function loadServiceAccountKey(): { client_email: string; private_key: string } {
+  if (cachedKeyFile) return cachedKeyFile;
+
+  // Strategy 1: JSON directly in env var
+  const rawJson = env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson) as { client_email?: string; private_key?: string };
+      if (parsed.client_email && parsed.private_key) {
+        cachedKeyFile = {
+          client_email: parsed.client_email,
+          private_key: parsed.private_key,
+        };
+        logger.info("Google Service Account loaded from GOOGLE_SERVICE_ACCOUNT_JSON env");
+        return cachedKeyFile;
+      }
+      logger.warn("GOOGLE_SERVICE_ACCOUNT_JSON is set but missing client_email/private_key");
+    } catch (err) {
+      logger.warn("GOOGLE_SERVICE_ACCOUNT_JSON is set but not valid JSON", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
-  // Resolve relative paths from project root
-  const absolutePath = keyPath.startsWith("/")
-    ? keyPath
-    : resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../../", keyPath);
+  // Strategies 2 + 3: path-based loading
+  const keyPath = env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+  if (!keyPath) {
+    throw new Error(
+      "Google credentials missing: set either GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_KEY_PATH"
+    );
+  }
 
-  const keyFile = JSON.parse(readFileSync(absolutePath, "utf8"));
+  const moduleDir = fileURLToPath(new URL(".", import.meta.url));
+  const candidates: string[] = keyPath.startsWith("/")
+    ? [keyPath]
+    : [
+        resolve(process.cwd(), keyPath),
+        resolve(moduleDir, "../../", keyPath), // /app/dist/lib → /app (API container)
+        resolve(moduleDir, "../../../../", keyPath), // local dev apps/api/src/lib → repo root
+        resolve("/app", keyPath),
+      ];
+
+  const triedAbsolute: string[] = [];
+  for (const candidate of candidates) {
+    triedAbsolute.push(candidate);
+    try {
+      statSync(candidate);
+      const parsed = JSON.parse(readFileSync(candidate, "utf8")) as {
+        client_email?: string;
+        private_key?: string;
+      };
+      if (!parsed.client_email || !parsed.private_key) {
+        throw new Error("Key file missing client_email or private_key");
+      }
+      cachedKeyFile = {
+        client_email: parsed.client_email,
+        private_key: parsed.private_key,
+      };
+      logger.info("Google Service Account loaded from file", { path: candidate });
+      return cachedKeyFile;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error(
+    `Google credentials file not found. Tried: ${triedAbsolute.join(", ")}. ` +
+      `Either set GOOGLE_SERVICE_ACCOUNT_JSON (preferred) or ensure the file at ` +
+      `GOOGLE_SERVICE_ACCOUNT_KEY_PATH is accessible from the runtime.`
+  );
+}
+
+/** Loads Service Account credentials and returns an authenticated calendar client */
+function getCalendarClient() {
+  const keyFile = loadServiceAccountKey();
 
   const auth = new google.auth.GoogleAuth({
     credentials: {

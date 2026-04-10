@@ -34,6 +34,13 @@ const envSchema = z.object({
   EVOLUTION_API_KEY: z.string().min(1),
   EVOLUTION_INSTANCE_NAME: z.string().min(1),
   GOOGLE_SERVICE_ACCOUNT_KEY_PATH: z.string().optional(),
+  /**
+   * Raw JSON string containing the Google Service Account credentials.
+   * Preferred over GOOGLE_SERVICE_ACCOUNT_KEY_PATH because it avoids
+   * filesystem path resolution issues across Docker/Trigger.dev/local env.
+   * If both are set, this takes precedence.
+   */
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_CALENDAR_ID: z.string().optional(),
   // Legacy OAuth (kept for backwards compatibility, not used with Service Account)
   GOOGLE_CLIENT_ID: z.string().optional(),
