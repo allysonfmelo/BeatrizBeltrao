@@ -8,10 +8,33 @@ import { db } from "../../config/supabase.js";
 import { services } from "@studio/db";
 import { logger } from "../../lib/logger.js";
 
-const REFERENCE_PATH = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../../../../../assets/catalog-html/service-reference.yaml"
-);
+/** Resolve the service-reference.yaml path.
+ *  On VPS (Docker): relative from compiled dist → ../../../../assets/
+ *  On Trigger.dev cloud: additionalFiles copies to worker root → /app/assets/ or similar
+ */
+function resolveReferencePath(): string {
+  const candidates = [
+    // Path from compiled dist/modules/service/ → project root assets/
+    resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../../../assets/catalog-html/service-reference.yaml"),
+    // Trigger.dev worker: files are at /app/assets/ (additionalFiles destination)
+    resolve(process.cwd(), "assets/catalog-html/service-reference.yaml"),
+    // Fallback: absolute /assets/ (some Docker setups)
+    "/assets/catalog-html/service-reference.yaml",
+  ];
+
+  for (const path of candidates) {
+    try {
+      statSync(path);
+      return path;
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  throw new Error(`service-reference.yaml not found. Tried: ${candidates.join(", ")}`);
+}
+
+const REFERENCE_PATH = resolveReferencePath();
 
 const referenceSchema = z.object({
   version: z.string(),
