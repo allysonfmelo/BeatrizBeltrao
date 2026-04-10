@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# ============================================================================
+# pre-push hook — Dispara deploy-vps.sh em terminal separado após push no main
+#
+# Quando você dá `git push` em `main`, este hook:
+#   1. Permite que o push continue normalmente
+#   2. Após o push, abre um novo Terminal.app executando scripts/deploy-vps.sh
+#   3. O script aguarda o CI do GitHub Actions terminar, depois atualiza a VPS
+#
+# Setup (uma vez):
+#   git config core.hooksPath scripts/git-hooks
+#
+# Para pular o hook em um push específico:
+#   SKIP_DEPLOY_HOOK=1 git push
+# ============================================================================
+
+set -e
+
+# Permite pular o hook facilmente
+if [ "${SKIP_DEPLOY_HOOK:-0}" = "1" ]; then
+  exit 0
+fi
+
+REMOTE="$1"
+URL="$2"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Lê stdin (formato: <local_ref> <local_sha> <remote_ref> <remote_sha>)
+while read local_ref local_sha remote_ref remote_sha; do
+  # Só dispara deploy quando o push é para main
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    SHORT_SHA="$(git rev-parse --short=7 "$local_sha")"
+
+    echo ""
+    echo "🚀 pre-push: push para main detectado (${SHORT_SHA})"
+    echo "   Abrindo terminal para deploy automático na VPS..."
+    echo ""
+
+    # Abre um novo Terminal.app executando o script de deploy
+    # Usa AppleScript para garantir que o script seja executado visualmente
+    osascript <<APPLESCRIPT
+tell application "Terminal"
+  activate
+  do script "cd '${REPO_ROOT}' && echo '⏳ Aguardando push concluir e CI iniciar...' && sleep 8 && ./scripts/deploy-vps.sh ${SHORT_SHA}"
+end tell
+APPLESCRIPT
+  fi
+done
+
+exit 0
