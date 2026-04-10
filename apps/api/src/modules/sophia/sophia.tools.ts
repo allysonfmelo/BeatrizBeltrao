@@ -524,6 +524,28 @@ async function executeCreateBooking(
         `💰 Pagamento no dia: R$ ${(parseFloat(booking.totalPrice) - depositValue).toFixed(2)}`,
       ];
 
+  // Payment block: prefer the ASAAS invoice URL (Pix/cartão/boleto in one
+  // link). If ASAAS errored above (catch on line ~491 swallowed it and left
+  // invoiceUrl empty), fall back to raw PIX instructions + a note that the
+  // link will be retried — keeps the booking alive even on transient ASAAS
+  // sandbox failures instead of silently dropping the payment step, which
+  // was the root cause of the real-test blockage.
+  const paymentLinkBlock = invoiceUrl
+    ? [
+        "",
+        "💳 LINK DE PAGAMENTO (SINAL 30%)",
+        `🔗 ${invoiceUrl}`,
+        "",
+        "Clique no link acima para pagar via Pix, cartão ou boleto de forma rápida e segura.",
+      ]
+    : [
+        "",
+        "⚠️ Tivemos uma instabilidade temporária gerando o link de pagamento.",
+        "Você pode pagar via Pix usando a chave abaixo, ou me avisar que eu gero o link de novo:",
+        `Chave PIX: ${pixKey}`,
+        `Titular: ${pixHolder}`,
+      ];
+
   const preBookingMessage = [
     "✨ PRÉ-AGENDAMENTO",
     "",
@@ -536,12 +558,10 @@ async function executeCreateBooking(
     "PAGAMENTO",
     `💳 Sinal (30%): R$ ${depositValue.toFixed(2)}`,
     ...dayPaymentBlock,
-    "",
-    `Chave PIX: ${pixKey}`,
-    `Titular: ${pixHolder}`,
+    ...paymentLinkBlock,
     "",
     "⏳ O pagamento deve ser realizado em até 24h para reserva da data.",
-    "Após o pagamento, envie o comprovante e aguarde a confirmação do agendamento. 🤍",
+    "Após a confirmação do pagamento, você recebe as informações completas de local e cuidados prévios. 🤍",
   ].join("\n");
 
   return JSON.stringify({
@@ -662,9 +682,9 @@ async function executeSendWebsiteLink(
     "",
     `🌐 ${WEBSITE_URL}`,
     "",
-    "Lá você encontra detalhes sobre maquiagem, penteados, pacotes para noivas e muito mais! 💄",
+    "Lá você encontra detalhes completos sobre maquiagem, com fotos dos trabalhos e todas as informações! 💄",
     "",
-    "Se tiver alguma dúvida, é só me chamar aqui! 💕",
+    "Depois de dar uma olhadinha, se quiser agendar ou tiver alguma dúvida específica, é só me chamar aqui! 💕",
   ].join("\n");
 
   await notificationService.sendWhatsAppMessage(
