@@ -136,6 +136,17 @@ services:
       policy: fixed
       amount_brl: 3000
     duration_minutes: 240
+    includes:
+      - "Maquiagem com cilios inclusos"
+      - "Penteado completo"
+      - "Prova da maquiagem e penteado"
+      - "Assessoria para acessorios"
+      - "Previa 1 semana antes"
+      - "Maquiagem a prova d'agua"
+      - "Aplicacao de veu e grinalda"
+    notes:
+      - "pacote completo para o grande dia"
+      - "atendimento feito pessoalmente pela Beatriz, com handoff apos Q&A"
     handoff_required: true
 
   - key: retoque_noiva
@@ -150,6 +161,14 @@ services:
       policy: fixed
       amount_brl: 850
     duration_minutes: 120
+    includes:
+      - "Retoque da maquiagem"
+      - "Retirada do veu"
+      - "Troca/retoque do penteado"
+      - "Ate 2h no local do evento"
+    notes:
+      - "acompanhamento pos-cerimonia"
+      - "atendimento feito pessoalmente pela Beatriz, com handoff apos Q&A"
     handoff_required: true
 
   - key: mae_da_noiva
@@ -164,6 +183,13 @@ services:
       policy: fixed
       amount_brl: 650
     duration_minutes: 120
+    includes:
+      - "Maquiagem com cilios inclusos"
+      - "Penteado completo"
+      - "Assessoria para acessorios"
+    notes:
+      - "pacote especial para a mae da noiva"
+      - "atendimento feito pessoalmente pela Beatriz, com handoff apos Q&A"
     handoff_required: true
 
 faq:
