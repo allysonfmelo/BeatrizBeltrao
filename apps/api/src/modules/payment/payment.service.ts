@@ -21,6 +21,22 @@ interface ClientForPayment {
 }
 
 /**
+ * Test phone prefix — same as the one used in notification.service.ts
+ * to bypass the Evolution send. For these phones we ALSO bypass the
+ * ASAAS API entirely and write a fake payment record + return a
+ * dummy URL, so that integration tests with fake CPFs (which ASAAS
+ * rejects with `invalid_object`) still complete the create_booking
+ * flow end-to-end. Real client phones (any prefix that is not this
+ * one) hit ASAAS normally.
+ */
+const TEST_PHONE_PREFIX = "5500099";
+const TEST_FAKE_INVOICE_URL_BASE = "https://sandbox.asaas.com/i/test-fake";
+
+function isTestPhone(phone: string): boolean {
+  return phone.replace(/\D/g, "").startsWith(TEST_PHONE_PREFIX);
+}
+
+/**
  * Normalizes a Brazilian phone number for ASAAS. Removes non-digits,
  * then strips the leading country code "55" if present, so a
  * webhook-format phone like "5581999999999" becomes "81999999999"
@@ -65,6 +81,34 @@ export async function createPaymentForBooking(
   booking: BookingForPayment,
   client: ClientForPayment
 ): Promise<string> {
+  // Test phones bypass ASAAS entirely. The harness uses fake CPFs
+  // (e.g. "111.222.333-44") that fail the ASAAS checksum validator,
+  // which would otherwise abort the whole create_booking flow and
+  // strand the test conversation with an "A definir" PIX placeholder.
+  // For these phones we write a payments row with a deterministic
+  // dummy URL that the LLM can show in the pre-booking message,
+  // closing the test loop. Real client phones hit ASAAS normally.
+  if (isTestPhone(client.phone)) {
+    const fakePaymentId = `test_${Date.now()}`;
+    const fakeInvoiceUrl = `${TEST_FAKE_INVOICE_URL_BASE}/${booking.id}`;
+    const depositValue = parseFloat(booking.depositAmount);
+
+    await db.insert(payments).values({
+      bookingId: booking.id,
+      asaasPaymentId: fakePaymentId,
+      asaasInvoiceUrl: fakeInvoiceUrl,
+      amount: depositValue.toString(),
+      status: "pendente",
+    });
+
+    logger.info("Payment record persisted (test phone — ASAAS skipped)", {
+      bookingId: booking.id,
+      fakePaymentId,
+    });
+
+    return fakeInvoiceUrl;
+  }
+
   // Create or find customer in ASAAS. The phone and CPF are normalized
   // to the format ASAAS expects — without this normalization the
   // sandbox (and production) rejects webhook-format phones like
