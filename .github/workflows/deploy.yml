@@ -83,7 +83,7 @@ jobs:
       - name: Deploy Trigger.dev tasks
         working-directory: apps/api
         env:
-          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
         run: npx trigger.dev@latest deploy
 
   deploy-api:
@@ -104,8 +104,8 @@ jobs:
           envs: IMAGE_TAG,FULL_IMAGE
           script: |
             docker pull "${FULL_IMAGE}:${IMAGE_TAG}"
-            cd ~/bb-deploy
+            cd /root/bb-deploy/src
             docker service update \
               --image "${FULL_IMAGE}:${IMAGE_TAG}" \
               --with-registry-auth \
-              bb-stack_api
+              bb_api
