@@ -130,6 +130,9 @@ const baseContext = {
   clientId: null as string | null,
   clientName: undefined as string | undefined,
   hasPendingBooking: false,
+  firstClientMessage: CONTENT,
+  firstMessageCategory: "direct" as const,
+  websiteLinkAlreadySent: false,
   services: [] as never[],
   messageHistory: [] as never[],
 };
@@ -200,6 +203,9 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(buildSystemPrompt)).toHaveBeenCalledWith(
       expect.objectContaining({
         clientName: "Maria",
+        phone: PHONE,
+        firstMessageCategory: "direct",
+        websiteLinkAlreadySent: false,
         serviceReferenceSummary: expect.any(String),
       })
     );
@@ -387,19 +393,32 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
   });
 
-  it("does immediate handoff for noiva/externo messages", async () => {
+  it("routes noiva messages through the LLM instead of immediate handoff", async () => {
+    vi.mocked(sophiaContext.loadContext).mockResolvedValueOnce({
+      ...baseContext,
+      firstClientMessage: "Quero orçamento para noiva",
+      firstMessageCategory: "cta_bridal",
+      messageHistory: [{ role: "user", content: "Quero orçamento para noiva" }],
+    } as never);
+    vi.mocked(sendMessage).mockResolvedValueOnce({
+      content: "Que alegria! ✨ Posso te explicar o pacote de noiva e tirar sua dúvida inicial.",
+      toolCalls: [],
+    });
+
     await processMessage(PHONE, "Quero orçamento para noiva");
 
-    expect(vi.mocked(sophiaContext.setHandoff)).toHaveBeenCalledWith(
-      CONVERSATION_ID,
-      "Solicitação de noiva/serviço externo"
-    );
-    expect(vi.mocked(notificationService.notifyMaquiadora)).toHaveBeenCalledOnce();
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledOnce();
     expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
       PHONE,
-      expect.stringMatching(/conectar com a Beatriz/i),
+      "Que alegria! ✨ Posso te explicar o pacote de noiva e tirar sua dúvida inicial.",
       CONVERSATION_ID
     );
-    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
+    expect(vi.mocked(sophiaContext.setHandoff)).not.toHaveBeenCalled();
+    expect(vi.mocked(notificationService.notifyMaquiadora)).not.toHaveBeenCalled();
+    expect(vi.mocked(buildSystemPrompt)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstMessageCategory: "cta_bridal",
+      })
+    );
   });
 });

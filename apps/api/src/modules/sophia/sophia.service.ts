@@ -12,8 +12,6 @@ const MAX_TOOL_ITERATIONS = 5;
 const NAME_PATTERN = /^[\p{L}\s]{2,}$/u;
 const CLEAR_INTENT_PATTERN =
   /\b(servi[cç]o|maquiagem|penteado|ambos|express|sequencial|combo|noiva|extern[oa]|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]vel|hor[aá]rio|data|valor|pre[cç]o|quanto|orcamento|orçamento|pdf|cat[aá]logo|duvida|d[úu]vida)\b/i;
-const HANDOFF_PATTERN =
-  /\b(noiva|casamento|extern[oa]|domic[ií]lio|a\s*domic[ií]lio|hotel|sal[aã]o)\b/i;
 
 interface ProcessMessageOptions {
   pushName?: string;
@@ -49,10 +47,6 @@ function normalizePushName(pushName?: string): string | null {
 
 function hasClearIntent(content: string): boolean {
   return CLEAR_INTENT_PATTERN.test(content);
-}
-
-function requiresImmediateHandoff(content: string): boolean {
-  return HANDOFF_PATTERN.test(content);
 }
 
 function extractNameFromReply(content: string): string | null {
@@ -197,22 +191,6 @@ export async function processMessage(
     return;
   }
 
-  if (requiresImmediateHandoff(normalizedContent)) {
-    const reason = "Solicitação de noiva/serviço externo";
-    await sophiaContext.setHandoff(conversation.id, reason);
-    await notificationService.notifyMaquiadora(
-      "Transferência de Conversa",
-      `Telefone: ${phone}\nMotivo: ${reason}\n\nA cliente precisa falar com você diretamente.`
-    );
-
-    const handoffMessage = displayFirstName
-      ? `Perfeito, ${displayFirstName}! ✨\nVou te conectar com a Beatriz agora para esse atendimento.`
-      : "Perfeito! ✨\nVou te conectar com a Beatriz agora para esse atendimento.";
-
-    await notificationService.sendSophiaMessage(phone, handoffMessage, conversation.id);
-    return;
-  }
-
   const userMessagesCount = ctx.messageHistory.filter((message) => message.role === "user").length;
   if (userMessagesCount <= 1 && !hasClearIntent(normalizedContent)) {
     const triageMessage = displayFirstName
@@ -231,6 +209,10 @@ export async function processMessage(
     conversationStatus: ctx.conversationStatus,
     clientName: displayFirstName,
     hasPendingBooking: ctx.hasPendingBooking,
+    phone: ctx.phone,
+    firstClientMessage: ctx.firstClientMessage,
+    firstMessageCategory: ctx.firstMessageCategory,
+    websiteLinkAlreadySent: ctx.websiteLinkAlreadySent,
   });
 
   // 4. Build message history with the new user message
@@ -268,6 +250,8 @@ export async function processMessage(
         phone,
         clientId: ctx.clientId,
         collectedData: ctx.collectedData,
+        firstMessageCategory: ctx.firstMessageCategory,
+        websiteLinkAlreadySent: ctx.websiteLinkAlreadySent,
       };
 
       for (const toolCall of response.toolCalls) {
@@ -277,6 +261,7 @@ export async function processMessage(
         if (toolContext.clientId !== ctx.clientId) {
           ctx.clientId = toolContext.clientId;
         }
+        ctx.websiteLinkAlreadySent = toolContext.websiteLinkAlreadySent;
 
         const toolMsg: LlmMessage = {
           role: "tool",

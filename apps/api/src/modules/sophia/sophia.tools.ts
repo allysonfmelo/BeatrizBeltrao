@@ -6,6 +6,7 @@ import * as paymentService from "../payment/payment.service.js";
 import * as clientService from "../client/client.service.js";
 import { env } from "../../config/env.js";
 import * as sophiaContext from "./sophia.context.js";
+import type { FirstMessageCategory } from "./sophia.context.js";
 import * as notificationService from "../notification/notification.service.js";
 import {
   getReferenceServices,
@@ -21,7 +22,7 @@ export const sophiaTools: LlmTool[] = [
     type: "function",
     function: {
       name: "list_services",
-      description: "Lista serviços e regras oficiais do atendimento usando a referência operacional como fonte prioritária.",
+      description: "Lista serviços, inclusões, cuidados, políticas, preços individuais e FAQ usando a referência operacional como fonte prioritária.",
       parameters: {
         type: "object",
         properties: {},
@@ -114,7 +115,7 @@ export const sophiaTools: LlmTool[] = [
     type: "function",
     function: {
       name: "send_website_link",
-      description: "Envia no WhatsApp o link do site com informações detalhadas sobre os serviços, fotos e detalhes completos.",
+      description: "Envia no WhatsApp o link do site como material complementar. Use apenas quando a cliente quiser explorar mais detalhes e o link ainda não tiver sido enviado nesta conversa.",
       parameters: {
         type: "object",
         properties: {},
@@ -130,6 +131,8 @@ interface ToolExecutionContext {
   phone: string;
   clientId: string | null;
   collectedData: Record<string, unknown>;
+  firstMessageCategory: FirstMessageCategory;
+  websiteLinkAlreadySent: boolean;
 }
 
 function hasConfirmedFullName(value: unknown): value is string {
@@ -218,10 +221,13 @@ async function executeListServices(): Promise<string> {
         item.pricing.policy === "fixed" && typeof item.pricing.amount_brl === "number"
           ? `R$ ${((item.pricing.amount_brl * reference.policies.deposit_percentage) / 100).toFixed(2)}`
           : "sob consulta",
+      pricingPolicy: item.pricing.policy,
+      amountBrl: item.pricing.amount_brl ?? null,
       duration:
         typeof item.duration_minutes === "number"
           ? `${item.duration_minutes} min`
           : "sob consulta",
+      includes: item.includes ?? [],
       notes: item.notes ?? [],
       careNotes: item.care_notes ?? [],
     };
@@ -239,6 +245,11 @@ async function executeListServices(): Promise<string> {
 
   return JSON.stringify({
     sourcePriority: reference.policies.source_priority,
+    policies: {
+      depositPercentage: reference.policies.deposit_percentage,
+      paymentTimeoutHours: reference.policies.payment_timeout_hours,
+      handoffImmediateTopics: reference.policies.handoff_immediate_topics,
+    },
     services: formattedReference,
     databaseServices: formattedDb,
     faq: reference.faq,
@@ -592,9 +603,30 @@ async function executeHandoff(
 
 const WEBSITE_URL = "https://biabeltrao.com.br";
 
+function shouldBlockWebsiteLink(ctx: ToolExecutionContext): string | null {
+  if (ctx.websiteLinkAlreadySent) {
+    return "O link do site já foi enviado nesta conversa. Não reenvie; continue o atendimento por aqui.";
+  }
+
+  if (ctx.firstMessageCategory !== "direct") {
+    return "A cliente iniciou a conversa por um CTA do site. Não envie o link novamente nesta conversa.";
+  }
+
+  return null;
+}
+
 async function executeSendWebsiteLink(
   ctx: ToolExecutionContext
 ): Promise<string> {
+  const blockedReason = shouldBlockWebsiteLink(ctx);
+  if (blockedReason) {
+    return JSON.stringify({
+      success: false,
+      skipped: true,
+      message: blockedReason,
+    });
+  }
+
   const message = [
     "✨ Confira nosso site com todas as informações sobre nossos serviços:",
     "",
@@ -610,6 +642,7 @@ async function executeSendWebsiteLink(
     message,
     ctx.conversationId
   );
+  ctx.websiteLinkAlreadySent = true;
 
   return JSON.stringify({
     success: true,

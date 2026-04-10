@@ -101,3 +101,22 @@
   - Fazer **triagem inicial** (entender o que a cliente busca) antes de despejar a lista de serviços.
   - Sempre ofertar PRIMEIRO o PDF informativo do tema desejado, e só informar valores extras se a cliente recusar ou pedir diretamente.
   - Tudo documentado na sessão `## REGRAS DE CONVERSA E TRIAGEM` de `sophia.prompt.ts`.
+
+## Session 2026-04-10 — Sophia Prompt Consolidation
+
+- Correção de preferência/regras: a estratégia de PDF da sessão 2026-03-25 ficou obsoleta. A decisão atual do usuário é:
+  - WhatsApp é o canal principal.
+  - O site é material complementar opcional e de envio único por conversa.
+  - PDF saiu do fluxo oficial da Sophia.
+  - Noiva deve ser acolhida, ter 1 ou 2 dúvidas respondidas e só depois entrar em handoff.
+- Preferência do usuário nesta sessão: preservar e refinar o diff local já existente ("anti-gravity"), sem sobrescrever mudanças locais em `sophia.prompt.ts`, `sophia.service.ts` e `bia-beltrao-website/index.html`.
+- Implementação que funcionou:
+  - Derivar no contexto da Sophia `firstClientMessage`, `firstMessageCategory` e `websiteLinkAlreadySent` para orientar o prompt e aplicar guardas determinísticas na tool do site.
+  - Remover o handoff imediato por regex do `sophia.service.ts` e deixar o fluxo de noiva ser conduzido pelo prompt + tool calling.
+  - Enriquecer `list_services` com `includes`, `careNotes`, `pricingPolicy`, `amountBrl` e políticas operacionais para reduzir dependência de texto duplicado no prompt.
+- Erro meu nesta sessão: tentei apagar assets binários com `apply_patch`, mas a operação falha quando o arquivo não é UTF-8 válido. Para assets/imagens binárias órfãs, usar `rm` após confirmar ausência de referências.
+- Erro meu nesta sessão: o helper `makeCtx()` dos testes da Sophia ficou estreito demais por inferência literal e aceitava apenas `"direct"` em `firstMessageCategory`. A correção foi declarar explicitamente o tipo de contexto de teste com a união completa.
+- Estado atual importante:
+  - `pnpm --filter @studio/api test -- sophia` passa com 34/34 testes.
+  - `pnpm --filter @studio/api typecheck` passa.
+  - A infraestrutura de envio de PDF ainda existe em `notification.service.ts`, mas não faz mais parte do contrato da Sophia.

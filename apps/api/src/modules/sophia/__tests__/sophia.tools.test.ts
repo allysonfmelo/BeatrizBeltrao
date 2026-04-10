@@ -85,18 +85,34 @@ const MOCK_BOOKING = {
   scheduledTime: "09:00",
 };
 
-const BASE_CTX = {
+type TestToolExecutionContext = {
+  conversationId: string;
+  phone: string;
+  clientId: string | null;
+  collectedData: Record<string, unknown>;
+  firstMessageCategory:
+    | "cta_interest"
+    | "cta_question"
+    | "cta_bridal"
+    | "cta_generic"
+    | "direct";
+  websiteLinkAlreadySent: boolean;
+};
+
+const BASE_CTX: TestToolExecutionContext = {
   conversationId: "conv-1",
   phone: "5511999990000",
   clientId: null as string | null,
-  collectedData: {} as Record<string, unknown>,
+  collectedData: {},
+  firstMessageCategory: "direct",
+  websiteLinkAlreadySent: false,
 };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeCtx(overrides: Partial<typeof BASE_CTX> = {}) {
+function makeCtx(overrides: Partial<TestToolExecutionContext> = {}) {
   return { ...BASE_CTX, collectedData: {}, ...overrides };
 }
 
@@ -142,7 +158,7 @@ beforeEach(() => {
   vi.mocked(sophiaContext.setHandoff).mockResolvedValue(undefined);
 
   vi.mocked(notificationService.notifyMaquiadora).mockResolvedValue(undefined);
-  vi.mocked(notificationService.sendWhatsAppServicePdf).mockResolvedValue("doc-1");
+  vi.mocked(notificationService.sendWhatsAppMessage).mockResolvedValue("msg-1");
 
   vi.mocked(serviceReferenceService.getServiceReference).mockReturnValue({
     version: "2026.03.24",
@@ -215,7 +231,7 @@ describe("sophiaTools", () => {
         "save_client_data",
         "create_booking",
         "cancel_booking",
-        "send_service_pdf",
+        "send_website_link",
         "handoff_to_human",
       ])
     );
@@ -241,6 +257,11 @@ describe("executeTool — list_services", () => {
       "database",
       "catalog_html_pdf",
     ]);
+    expect(parsed.policies).toEqual({
+      depositPercentage: 30,
+      paymentTimeoutHours: 24,
+      handoffImmediateTopics: ["noiva", "externo"],
+    });
     expect(parsed.services).toHaveLength(1);
     expect(parsed.databaseServices).toHaveLength(1);
 
@@ -250,6 +271,10 @@ describe("executeTool — list_services", () => {
     expect(svc.price).toBe("R$ 250.00");
     expect(svc.deposit).toBe("R$ 75.00");
     expect(svc.duration).toBe("60 min");
+    expect(svc.includes).toEqual([]);
+    expect(svc.careNotes).toEqual([]);
+    expect(svc.pricingPolicy).toBe("fixed");
+    expect(svc.amountBrl).toBe(250);
   });
 
   it("calcula o sinal como 30% do preco", async () => {
@@ -576,35 +601,49 @@ describe("executeTool — handoff_to_human", () => {
 });
 
 // ---------------------------------------------------------------------------
-// send_service_pdf
+// send_website_link
 // ---------------------------------------------------------------------------
 
-describe("executeTool — send_service_pdf", () => {
-  it("envia catálogo PDF quando o tema é válido", async () => {
+describe("executeTool — send_website_link", () => {
+  it("envia o link do site quando a conversa é direta e ainda não houve envio", async () => {
     const result = await executeTool(
-      makeToolCall("send_service_pdf", { topic: "maquiagem" }),
+      makeToolCall("send_website_link"),
       makeCtx()
     );
     const parsed = JSON.parse(result);
 
-    expect(notificationService.sendWhatsAppServicePdf).toHaveBeenCalledWith(
+    expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledWith(
       "5511999990000",
-      "maquiagem",
-      "conv-1",
-      expect.any(String)
+      expect.stringContaining("https://biabeltrao.com.br"),
+      "conv-1"
     );
     expect(parsed.success).toBe(true);
   });
 
-  it("retorna erro quando o tema do PDF é inválido", async () => {
+  it("bloqueia reenvio quando o link já foi enviado na conversa", async () => {
     const result = await executeTool(
-      makeToolCall("send_service_pdf", { topic: "unhas" }),
-      makeCtx()
+      makeToolCall("send_website_link"),
+      makeCtx({ websiteLinkAlreadySent: true })
     );
     const parsed = JSON.parse(result);
 
-    expect(notificationService.sendWhatsAppServicePdf).not.toHaveBeenCalled();
-    expect(parsed.error).toMatch(/tema de pdf inválido/i);
+    expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
+    expect(parsed.success).toBe(false);
+    expect(parsed.skipped).toBe(true);
+    expect(parsed.message).toMatch(/já foi enviado/i);
+  });
+
+  it("bloqueia envio quando a cliente veio de CTA do site", async () => {
+    const result = await executeTool(
+      makeToolCall("send_website_link"),
+      makeCtx({ firstMessageCategory: "cta_interest" })
+    );
+    const parsed = JSON.parse(result);
+
+    expect(notificationService.sendWhatsAppMessage).not.toHaveBeenCalled();
+    expect(parsed.success).toBe(false);
+    expect(parsed.skipped).toBe(true);
+    expect(parsed.message).toMatch(/CTA do site/i);
   });
 });
 

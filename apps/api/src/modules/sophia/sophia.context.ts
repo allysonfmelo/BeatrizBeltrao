@@ -1,9 +1,18 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, asc, desc, like } from "drizzle-orm";
 import { db } from "../../config/supabase.js";
 import { conversations, messages, clients, bookings } from "@studio/db";
 import * as serviceService from "../service/service.service.js";
 import { logger } from "../../lib/logger.js";
 import type { LlmMessage } from "../../lib/llm.js";
+
+const WEBSITE_URL = "https://biabeltrao.com.br";
+
+export type FirstMessageCategory =
+  | "cta_interest"
+  | "cta_question"
+  | "cta_bridal"
+  | "cta_generic"
+  | "direct";
 
 /** Full context loaded for a conversation */
 export interface SophiaContext {
@@ -15,8 +24,74 @@ export interface SophiaContext {
   clientId: string | null;
   clientName: string | undefined;
   hasPendingBooking: boolean;
+  firstClientMessage: string;
+  firstMessageCategory: FirstMessageCategory;
+  websiteLinkAlreadySent: boolean;
   services: Awaited<ReturnType<typeof serviceService.listActive>>;
   messageHistory: LlmMessage[];
+}
+
+function classifyFirstClientMessage(content: string): FirstMessageCategory {
+  const normalized = content.trim();
+
+  if (!normalized) return "direct";
+
+  if (
+    /\b(noiva|noivas|dia da noiva|retoque noiva|m[aã]e da noiva|consultoria para noivas|or[cç]amento para noivas)\b/i.test(
+      normalized
+    )
+  ) {
+    return "cta_bridal";
+  }
+
+  if (/\bd[úu]vida(?:s)?\b/i.test(normalized)) {
+    return "cta_question";
+  }
+
+  if (
+    /(tenho interesse|vi no site e gostaria de agendar|gostaria de agendar um penteado|escova\s*\/\s*babyliss|curso de automaquiagem|maquiagem social|penteado social)/i.test(
+      normalized
+    )
+  ) {
+    return "cta_interest";
+  }
+
+  if (
+    /(gostaria de agendar um hor[aá]rio|gostaria de solicitar um or[cç]amento|gostaria de agendar um or[cç]amento)/i.test(
+      normalized
+    )
+  ) {
+    return "cta_generic";
+  }
+
+  return "direct";
+}
+
+async function loadFirstClientMessage(conversationId: string): Promise<string> {
+  const [firstClientMessage] = await db
+    .select({ content: messages.content })
+    .from(messages)
+    .where(and(eq(messages.conversationId, conversationId), eq(messages.role, "client")))
+    .orderBy(asc(messages.createdAt))
+    .limit(1);
+
+  return firstClientMessage?.content.trim() ?? "";
+}
+
+async function loadWebsiteLinkAlreadySent(conversationId: string): Promise<boolean> {
+  const [websiteMessage] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.role, "sophia"),
+        like(messages.content, `%${WEBSITE_URL}%`)
+      )
+    )
+    .limit(1);
+
+  return Boolean(websiteMessage);
 }
 
 /**
@@ -91,6 +166,8 @@ export async function loadContext(
 
   // Load message history
   const messageHistory = await loadMessageHistory(conversationId);
+  const firstClientMessage = await loadFirstClientMessage(conversationId);
+  const websiteLinkAlreadySent = await loadWebsiteLinkAlreadySent(conversationId);
 
   const collectedData = (conversation.collectedData as Record<string, unknown>) ?? {};
 
@@ -103,6 +180,9 @@ export async function loadContext(
     clientId: conversation.clientId,
     clientName,
     hasPendingBooking,
+    firstClientMessage,
+    firstMessageCategory: classifyFirstClientMessage(firstClientMessage),
+    websiteLinkAlreadySent,
     services,
     messageHistory,
   };
