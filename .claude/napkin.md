@@ -78,6 +78,21 @@
 - 2026-03-24 (self): `service-reference.yaml` precisa ser a fonte prioritária também no retorno de `list_services` (não apenas no prompt), para manter consistência de regras/preço/FAQ quando DB estiver vazio ou desatualizado.
 - 2026-03-24 (self): para manter compliance da regra "nome do payload não persiste sem confirmação", `save_client_data` deve exigir nome completo válido antes de criar cliente novo no banco.
 
+## Session 2026-04-10 — Sophia handoff + ambos/express/sequencial
+
+- **Bug reportado**: IA "não está fazendo o check da agenda". Diagnóstico real ao ler DB prod (tabela `messages`): o Google Calendar está OK; o bug é a Sophia escolhendo `handoff_to_human` em vez de `check_availability` para perguntas de disponibilidade. Exemplo real em prod: cliente "Amanhã você tem disponibilidade de 15h?" → Sophia "A Beatriz já vai te atender". Evitar diagnosticar cegamente: antes de mexer em `google-calendar.ts`, sempre consultar tabela `messages`/`conversations` e ver o que a Sophia realmente respondeu.
+- **Trigger.dev MCP `get_run_details` está quebrado** (retorna `Trace not found` para qualquer run em dev e prod). `list_runs` funciona. CLI `trigger.dev@4.4.3` não tem subcomando pra inspecionar runs. Fallback: ler `messages`/`conversations` direto da DB via script `apps/api/scripts/query-msgs.mts`.
+- **Trigger worker NÃO inicializa Sentry**: `Sentry.init` só é chamado em `apps/api/src/main.ts`, não nos arquivos de `src/trigger/*`. Qualquer `captureException` dentro de uma task é no-op. TODO futuro: adicionar init de Sentry no entry point do worker.
+- **Distinção Trigger env vars**: `TRIGGER_SECRET_KEY=tr_prod_...` é a chave de projeto (SDK dentro do app dispara tasks). `TRIGGER_ACCESS_TOKEN=tr_pat_...` é Personal Access Token (CLI + MCP). Não confundir.
+- **Race condition em `syncReferenceServicesToDb`** (main.ts:34): roda na boot e faz `findFirst`+`insert` não-atômicos. Se o dev server tiver hot-reload ativo e várias instâncias boot em sequência, cria duplicatas por nome. Limpei as duplicatas com `scripts/dedupe-ambos-services.mts` + `scripts/purge-duplicate-services.mts`. Mitigação definitiva: adicionar UNIQUE constraint em `services.name` via migration.
+- **Regra de precificação (cliente)**: NUNCA informar soma de valores na conversa com a cliente. Sempre mostrar valores individuais (Maquiagem R$ 240 / Penteado R$ 190 separados). O único valor total permitido é o bloco técnico de "Sinal (30%)" no pré-agendamento. Regra aplicada no prompt (seção `REGRA DE PREÇOS`) e no `executeCreateBooking` (bloco itemizado quando `service.type === "combo"`).
+- **Vocabulário proibido**: palavra "combo" não deve aparecer em mensagens da Sophia. Usar "ambos", "os dois serviços", "maquiagem e penteado juntos". Novos serviços bookable: `ambos_express` (60min) e `ambos_sequencial` (120min), preço R$ 430 cada (usado internamente para cálculo de sinal).
+- **Teste E2E via harness**: `apps/api/scripts/test-sophia-e2e.mts` sobe um mock HTTP na porta 4999, aponta `EVOLUTION_API_URL` pra ele, e dirige conversa scriptada. Não pode fazer monkey-patch de funções exportadas (`calculateTypingDelay`) porque ESM módulos são frozen. Testes demoram ~60s por causa do delay de digitação. Não chama Evolution real.
+- **Testes pré-existentes quebrados** (commit 7fa93b9, não causados por mim):
+  - `send_service_pdf` tests (4) — tool foi substituído por `send_website_link`
+  - `booking.service > createPreBooking` (4) — mock setup problemático
+  - `notification.service > sendSophiaMessage` (2) — mock de chunks
+
 ## Session 2026-03-25 — Sophia Rules & Triage
 
 - Preferência do usuário sobre comportamento da Sophia:

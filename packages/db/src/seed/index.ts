@@ -44,11 +44,19 @@ async function seed() {
       durationMinutes: 75,
     },
     {
-      name: "Combo Maquiagem + Penteado",
+      name: "Maquiagem + Penteado (Express)",
       type: "combo",
       category: "estudio",
-      description: "Maquiagem completa + penteado",
-      price: "400.00",
+      description: "Maquiagem e penteado executados simultaneamente em 1h. Valores: Maquiagem R$ 240 + Penteado R$ 190 (apresentados separadamente na conversa).",
+      price: "430.00",
+      durationMinutes: 60,
+    },
+    {
+      name: "Maquiagem + Penteado (Sequencial)",
+      type: "combo",
+      category: "estudio",
+      description: "Maquiagem em 1h e penteado em 1h, total 2h consecutivas. Valores: Maquiagem R$ 240 + Penteado R$ 190 (apresentados separadamente na conversa).",
+      price: "430.00",
       durationMinutes: 120,
     },
     {

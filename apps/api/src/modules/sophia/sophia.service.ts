@@ -11,7 +11,7 @@ import { logger } from "../../lib/logger.js";
 const MAX_TOOL_ITERATIONS = 5;
 const NAME_PATTERN = /^[\p{L}\s]{2,}$/u;
 const CLEAR_INTENT_PATTERN =
-  /\b(servi[cç]o|maquiagem|penteado|combo|noiva|extern[oa]|domic[ií]lio|agendar|agenda|hor[aá]rio|data|valor|pre[cç]o|quanto|orcamento|orçamento|pdf|cat[aá]logo|duvida|d[úu]vida)\b/i;
+  /\b(servi[cç]o|maquiagem|penteado|ambos|express|sequencial|combo|noiva|extern[oa]|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]vel|hor[aá]rio|data|valor|pre[cç]o|quanto|orcamento|orçamento|pdf|cat[aá]logo|duvida|d[úu]vida)\b/i;
 const HANDOFF_PATTERN =
   /\b(noiva|casamento|extern[oa]|domic[ií]lio|a\s*domic[ií]lio|hotel|sal[aã]o)\b/i;
 

@@ -90,19 +90,39 @@ services:
       amount_brl: 120
     duration_minutes: 45
 
-  - key: combo_maquiagem_penteado
-    name: "Combo Maquiagem + Penteado"
+  - key: ambos_express
+    name: "Maquiagem + Penteado (Express)"
     type: combo
     category: estudio
-    mode: combinado
-    bookable: false
-    sync_to_db: false
+    mode: simultaneo
+    bookable: true
+    sync_to_db: true
     pdf_topic: maquiagem
     pricing:
-      policy: sob_consulta
+      policy: fixed
+      amount_brl: 430
+    duration_minutes: 60
+    notes:
+      - "maquiagem e penteado executados simultaneamente em 1h"
+      - "sophia NUNCA soma valores; apresenta maquiagem R$ 240 e penteado R$ 190 separados"
+      - "sinal consolidado: 30% de 430 = R$ 129"
+
+  - key: ambos_sequencial
+    name: "Maquiagem + Penteado (Sequencial)"
+    type: combo
+    category: estudio
+    mode: sequencial
+    bookable: true
+    sync_to_db: true
+    pdf_topic: maquiagem
+    pricing:
+      policy: fixed
+      amount_brl: 430
     duration_minutes: 120
     notes:
-      - "combos oficiais sao definidos na referencia operacional"
+      - "maquiagem em 1h, penteado em 1h, total de 2h consecutivas"
+      - "sophia NUNCA soma valores; apresenta maquiagem R$ 240 e penteado R$ 190 separados"
+      - "sinal consolidado: 30% de 430 = R$ 129"
 
   - key: dia_da_noiva
     name: "Dia da Noiva"

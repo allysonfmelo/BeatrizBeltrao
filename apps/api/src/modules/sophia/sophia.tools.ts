@@ -479,10 +479,32 @@ async function executeCreateBooking(
   await sophiaContext.setIntent(ctx.conversationId, "agendamento");
 
   const depositValue = parseFloat(booking.depositAmount);
-  const paymentOnServiceDay = parseFloat(booking.totalPrice) - depositValue;
   const pixKey = env.PIX_KEY?.trim() || "A definir";
   const pixHolder = env.PIX_HOLDER_NAME?.trim() || "A definir";
   const clientName = client.fullName;
+
+  // For "Ambos" services (type = combo), present the components (Maquiagem/Penteado)
+  // individually — never a summed total — per the business rule. Per-day payment
+  // is also shown per-component for the same reason.
+  const isAmbosService = service.type === "combo";
+  const componentLines = isAmbosService
+    ? [
+        "",
+        "SERVIÇOS INCLUSOS",
+        "💄 Maquiagem Social — R$ 240,00",
+        "💇‍♀️ Penteado Social — R$ 190,00",
+      ]
+    : [];
+  const dayPaymentBlock = isAmbosService
+    ? [
+        "💰 A pagar no dia do serviço:",
+        "   • Maquiagem: R$ 168,00",
+        "   • Penteado: R$ 133,00",
+      ]
+    : [
+        `💰 Pagamento no dia: R$ ${(parseFloat(booking.totalPrice) - depositValue).toFixed(2)}`,
+      ];
+
   const preBookingMessage = [
     "✨ PRÉ-AGENDAMENTO",
     "",
@@ -490,10 +512,11 @@ async function executeCreateBooking(
     `NOME: ${clientName}`,
     `DATA: ${data.scheduledDate}`,
     `HORÁRIO: ${data.scheduledTime}`,
+    ...componentLines,
     "",
     "PAGAMENTO",
     `💳 Sinal (30%): R$ ${depositValue.toFixed(2)}`,
-    `💰 Pagamento no dia: R$ ${paymentOnServiceDay.toFixed(2)}`,
+    ...dayPaymentBlock,
     "",
     `Chave PIX: ${pixKey}`,
     `Titular: ${pixHolder}`,
