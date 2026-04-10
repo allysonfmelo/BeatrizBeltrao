@@ -24,32 +24,20 @@ const CLEAR_INTENT_PATTERN =
   /\b(servi[cç]os?|maquiagens?|penteados?|ambos|express|sequencial|combo|noivas?|extern[oa]s?|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]ve(?:l|is)|hor[aá]rios?|datas?|valores?|pre[cç]os?|quanto|or[cç]amentos?|pdf|cat[aá]logos?|d[úu]vidas?|informa[cç][aãoõ]e?s?|mais info|saber|sobre\s+(?:os\s+)?servi[cç]os?)\b/i;
 
 /**
- * Test phone → OpenRouter model override. Phones starting with
- * "55000991" use the default env model; the other prefixes each map
- * to a specific model so the test harness can run the same scenario
- * against multiple models in parallel and compare behavior. The
- * notification service has a parallel `TEST_PHONE_PREFIX` guard that
- * short-circuits the Evolution API send for these phones.
+ * Previously this file had a TEST_PHONE_MODEL_MAP that routed different
+ * test-phone prefixes (55000992, 55000993, 55000994, 55000995) to free
+ * OpenRouter models (gemma-4-26b-it:free, gemma-4-31b-it:free,
+ * minimax-m2.5:free, gemini-2.0-flash-lite-001) for a one-off multi-
+ * model comparison test. It is REMOVED now because it caused persistent
+ * test failures: every time a test scenario happened to use a phone
+ * starting with one of those prefixes, the LLM call would fail with
+ * a 429 rate limit from the free provider tier, masking the real bug.
+ * Any future multi-model testing should be done via an explicit env
+ * var override instead of silent phone-based routing.
  *
- * Model IDs validated against https://openrouter.ai/api/v1/models
- * on 2026-04-10.
+ * All Sophia runs now always use `env.OPENROUTER_MODEL` (currently set
+ * to `openai/gpt-4o-mini` in production).
  */
-const TEST_PHONE_MODEL_MAP: Record<string, string> = {
-  "55000991": "", // default model from env.OPENROUTER_MODEL
-  "55000992": "google/gemma-4-26b-a4b-it:free",
-  "55000993": "google/gemma-4-31b-it:free",
-  "55000994": "minimax/minimax-m2.5:free",
-  "55000995": "google/gemini-2.0-flash-lite-001",
-};
-
-function resolveModelOverride(phone: string): string | undefined {
-  for (const [prefix, model] of Object.entries(TEST_PHONE_MODEL_MAP)) {
-    if (phone.startsWith(prefix)) {
-      return model || undefined;
-    }
-  }
-  return undefined;
-}
 
 interface ProcessMessageOptions {
   pushName?: string;
@@ -261,17 +249,11 @@ export async function processMessage(
   // 5. Agentic loop
   let iterations = 0;
   let currentMessages = llmMessages;
-  const modelOverride = resolveModelOverride(phone);
-  if (modelOverride) {
-    logger.info("Using test-phone model override", { phone, model: modelOverride });
-  }
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
-    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools, {
-      modelOverride,
-    });
+    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools);
 
     // If there are tool calls, execute them and resubmit
     if (response.toolCalls.length > 0) {
