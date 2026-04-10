@@ -95,22 +95,31 @@ async function loadWebsiteLinkAlreadySent(conversationId: string): Promise<boole
 }
 
 /**
- * Gets or creates an active conversation for a phone number.
+ * Gets or creates a conversation for a phone number.
+ *
+ * Rules:
+ *  - Look for the MOST RECENT conversation for the phone (any status).
+ *  - If found AND status is "ativa" → return it (normal flow).
+ *  - If found AND status is "aguardando_humano" → return it (the caller
+ *    `processMessage` checks `isHandoff` and skips Sophia processing,
+ *    waiting for human intervention). We MUST NOT create a new conversation
+ *    here, otherwise every message after a handoff would start from scratch
+ *    with an empty history — which was the root cause of the "Oi, Test! Como
+ *    posso te ajudar hoje?" (triage) reset bug observed in production.
+ *  - If found AND status is "finalizada" OR there is no conversation at all
+ *    → create a new one with status="ativa".
  */
 export async function getOrCreateConversation(phone: string) {
-  // Look for an active conversation
-  const existing = await db.query.conversations.findFirst({
-    where: and(
-      eq(conversations.phone, phone),
-      eq(conversations.status, "ativa")
-    ),
+  const latest = await db.query.conversations.findFirst({
+    where: eq(conversations.phone, phone),
+    orderBy: [desc(conversations.createdAt)],
   });
 
-  if (existing) {
-    return existing;
+  // Reuse existing conversation unless it's fully terminated.
+  if (latest && latest.status !== "finalizada") {
+    return latest;
   }
 
-  // Create new conversation
   const [conversation] = await db
     .insert(conversations)
     .values({
@@ -123,6 +132,7 @@ export async function getOrCreateConversation(phone: string) {
   logger.info("New conversation created", {
     conversationId: conversation.id,
     phone,
+    reasonPreviousStatus: latest?.status ?? "none",
   });
 
   return conversation;

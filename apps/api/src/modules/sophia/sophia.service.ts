@@ -13,6 +13,34 @@ const NAME_PATTERN = /^[\p{L}\s]{2,}$/u;
 const CLEAR_INTENT_PATTERN =
   /\b(servi[cç]o|maquiagem|penteado|ambos|express|sequencial|combo|noiva|extern[oa]|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]vel|hor[aá]rio|data|valor|pre[cç]o|quanto|orcamento|orçamento|pdf|cat[aá]logo|duvida|d[úu]vida)\b/i;
 
+/**
+ * Test phone → OpenRouter model override. Phones starting with
+ * "55000991" use the default env model; the other prefixes each map
+ * to a specific model so the test harness can run the same scenario
+ * against multiple models in parallel and compare behavior. The
+ * notification service has a parallel `TEST_PHONE_PREFIX` guard that
+ * short-circuits the Evolution API send for these phones.
+ *
+ * Model IDs validated against https://openrouter.ai/api/v1/models
+ * on 2026-04-10.
+ */
+const TEST_PHONE_MODEL_MAP: Record<string, string> = {
+  "55000991": "", // default model from env.OPENROUTER_MODEL
+  "55000992": "google/gemma-4-26b-a4b-it:free",
+  "55000993": "google/gemma-4-31b-it:free",
+  "55000994": "minimax/minimax-m2.5:free",
+  "55000995": "google/gemini-2.0-flash-lite-001",
+};
+
+function resolveModelOverride(phone: string): string | undefined {
+  for (const [prefix, model] of Object.entries(TEST_PHONE_MODEL_MAP)) {
+    if (phone.startsWith(prefix)) {
+      return model || undefined;
+    }
+  }
+  return undefined;
+}
+
 interface ProcessMessageOptions {
   pushName?: string;
 }
@@ -223,11 +251,17 @@ export async function processMessage(
   // 5. Agentic loop
   let iterations = 0;
   let currentMessages = llmMessages;
+  const modelOverride = resolveModelOverride(phone);
+  if (modelOverride) {
+    logger.info("Using test-phone model override", { phone, model: modelOverride });
+  }
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
-    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools);
+    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools, {
+      modelOverride,
+    });
 
     // If there are tool calls, execute them and resubmit
     if (response.toolCalls.length > 0) {
@@ -298,15 +332,30 @@ export async function processMessage(
     return;
   }
 
-  // Max iterations reached — send fallback
+  // Max iterations reached — do NOT set handoff. Send a friendly retry
+  // message and log the issue so we can debug. The next client message
+  // will re-enter processMessage normally, giving the LLM another chance.
+  //
+  // Historical note: we used to dispatch a fallback message containing
+  // "Vou chamar a Beatriz" AND call setHandoff(reason="Max tool iterations
+  // reached") here. That was wrong on two levels:
+  //   (1) It gave up on the conversation on any transient LLM hiccup,
+  //       causing `status` to flip to "aguardando_humano", which in turn
+  //       made `getOrCreateConversation` create a fresh conversation on
+  //       the next message (empty history → triage reset loop).
+  //   (2) The literal phrase "Vou chamar a Beatriz" was being memorized
+  //       by the LLM and re-emitted as a hallucinated text response in
+  //       unrelated situations, bypassing the real `handoff_to_human`
+  //       tool call and creating ghost handoffs.
+  // Now we keep the conversation alive and wait for the next turn.
   const fallbackMessage =
-    "Desculpe, estou com uma dificuldade técnica no momento. Vou chamar a Beatriz para te ajudar! ✨";
+    "Um segundinho, deixa eu conferir aqui pra você e já te respondo direitinho ✨";
 
   await notificationService.sendSophiaMessage(phone, fallbackMessage, conversation.id);
-  await sophiaContext.setHandoff(conversation.id, "Max tool iterations reached");
 
-  logger.warn("Sophia max iterations reached, handoff triggered", {
+  logger.warn("Sophia max tool iterations reached — sent retry message, NOT triggering handoff", {
     conversationId: conversation.id,
     phone,
+    iterations,
   });
 }

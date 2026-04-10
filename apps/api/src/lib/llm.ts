@@ -92,6 +92,17 @@ function toOpenAiMessages(
   return result;
 }
 
+/** Optional per-request settings */
+export interface SendMessageOptions {
+  /**
+   * Override the OpenRouter model for this request. Used by the test harness
+   * to exercise Sophia against multiple models side by side (see the test
+   * phone → model mapping in `sophia.service.ts`). When omitted, falls back
+   * to `env.OPENROUTER_MODEL`.
+   */
+  modelOverride?: string;
+}
+
 /**
  * Sends a message to the LLM via OpenRouter and returns the response.
  * Supports tool/function calling for structured Sophia actions.
@@ -99,13 +110,15 @@ function toOpenAiMessages(
 export async function sendMessage(
   systemPrompt: string,
   messages: LlmMessage[],
-  tools?: LlmTool[]
+  tools?: LlmTool[],
+  options: SendMessageOptions = {}
 ): Promise<LlmResponse> {
+  const model = options.modelOverride ?? env.OPENROUTER_MODEL;
   try {
     const allMessages = toOpenAiMessages(systemPrompt, messages);
 
     const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
-      model: env.OPENROUTER_MODEL,
+      model,
       messages: allMessages,
       max_tokens: 1024,
       temperature: 0.7,
@@ -120,7 +133,7 @@ export async function sendMessage(
     const choice = response.choices[0];
 
     if (!choice?.message) {
-      logger.error("LLM returned empty response");
+      logger.error("LLM returned empty response", { model });
       return { content: null, toolCalls: [] };
     }
 
@@ -140,8 +153,8 @@ export async function sendMessage(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown LLM error";
-    captureException(error, { source: "llm.sendMessage", model: env.OPENROUTER_MODEL });
-    logger.error("LLM request failed", { error: message });
+    captureException(error, { source: "llm.sendMessage", model });
+    logger.error("LLM request failed", { error: message, model });
     throw new Error(`LLM request failed: ${message}`);
   }
 }
