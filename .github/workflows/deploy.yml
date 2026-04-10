@@ -84,6 +84,15 @@ jobs:
       - name: Build workspace packages
         run: pnpm --filter @studio/shared --filter @studio/db build
 
+      - name: Materialize Google Service Account credentials
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p credentials
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > credentials/google-service-account.json
+          # Validate it's valid JSON before proceeding
+          node -e "JSON.parse(require('fs').readFileSync('credentials/google-service-account.json','utf8'))"
+
       - name: Deploy Trigger.dev tasks
         working-directory: apps/api
         env:

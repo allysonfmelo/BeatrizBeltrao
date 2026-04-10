@@ -93,8 +93,9 @@ export default defineConfig({
           .map((key) => ({ name: key, value: vars[key] }));
       }),
       // Include assets (service-reference.yaml + PDF catalogs)
+      // and Google Service Account credentials needed by calendar integration
       additionalFiles({
-        files: ["../../assets/**"],
+        files: ["../../assets/**", "../../credentials/**"],
       }),
     ],
   },
