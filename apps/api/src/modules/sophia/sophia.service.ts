@@ -279,7 +279,15 @@ export async function processMessage(
       currentMessages = [...currentMessages, assistantMsg];
 
       // Execute each tool and add results
-      const toolContext = {
+      const toolContext: {
+        conversationId: string;
+        phone: string;
+        clientId: string | null;
+        collectedData: Record<string, unknown>;
+        firstMessageCategory: typeof ctx.firstMessageCategory;
+        websiteLinkAlreadySent: boolean;
+        handoffJustHappened?: boolean;
+      } = {
         conversationId: conversation.id,
         phone,
         clientId: ctx.clientId,
@@ -303,6 +311,18 @@ export async function processMessage(
           tool_call_id: toolCall.id,
         };
         currentMessages = [...currentMessages, toolMsg];
+      }
+
+      // If handoff_to_human just fired, the client has already received the
+      // confirmation message via executeHandoff. Bail out of the loop now —
+      // do NOT call the LLM again, otherwise it might emit a duplicate
+      // message ignoring the prompt rule.
+      if (toolContext.handoffJustHappened) {
+        logger.info("Handoff completed inside tool — skipping further LLM iterations", {
+          conversationId: conversation.id,
+          iterations,
+        });
+        return;
       }
 
       continue;

@@ -133,6 +133,14 @@ interface ToolExecutionContext {
   collectedData: Record<string, unknown>;
   firstMessageCategory: FirstMessageCategory;
   websiteLinkAlreadySent: boolean;
+  /**
+   * Set to true by `executeHandoff` after it (a) flips the conversation
+   * to handoff state and (b) sends the transfer-confirmation message to
+   * the client. The agent loop in `sophia.service.ts` reads this flag
+   * after each tool call and breaks out of the loop immediately, so the
+   * LLM doesn't get another turn to write a duplicate message.
+   */
+  handoffJustHappened?: boolean;
 }
 
 function hasConfirmedFullName(value: unknown): value is string {
@@ -588,15 +596,37 @@ async function executeHandoff(
 ): Promise<string> {
   await sophiaContext.setHandoff(ctx.conversationId, reason);
 
-  // Notify Beatriz
+  // Send the transfer-confirmation message to the client. This MUST happen
+  // here (not be left for the LLM to produce as text), because the prompt
+  // explicitly forbids the LLM from writing "A Beatriz vai te atender" /
+  // "Vou chamar a Beatriz" as free text — that rule was added to stop the
+  // LLM from hallucinating ghost handoffs without invoking the tool. With
+  // the LLM blocked from writing the message and the previous code path
+  // not sending anything either, the client was getting silence after a
+  // legitimate handoff_to_human call. Sending it from inside the tool
+  // closes that gap.
+  const clientHandoffMessage =
+    "Pronto! 💕 Já passei seu atendimento para a Beatriz e ela vai te responder por aqui em breve com todos os detalhes ✨";
+  await notificationService.sendSophiaMessage(
+    ctx.phone,
+    clientHandoffMessage,
+    ctx.conversationId
+  );
+
+  // Notify Beatriz separately
   await notificationService.notifyMaquiadora(
     "Transferência de Conversa",
     `Telefone: ${ctx.phone}\nMotivo: ${reason}\n\nA cliente precisa falar com você diretamente.`
   );
 
+  // Signal to the agent loop that the handoff is complete and it should
+  // stop iterating (no more LLM calls). Without this, the LLM gets another
+  // turn after the tool result and may emit a duplicate message.
+  ctx.handoffJustHappened = true;
+
   return JSON.stringify({
     success: true,
-    message: "Conversa transferida para a Beatriz",
+    message: "Conversa transferida para a Beatriz. A mensagem de confirmação JÁ foi enviada à cliente pelo sistema — você NÃO precisa enviar nada adicional.",
     reason,
   });
 }
