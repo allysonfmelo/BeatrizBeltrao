@@ -3,6 +3,7 @@ import { logger } from "./logger.js";
 import { captureException } from "./sentry.js";
 
 const baseUrl = `${env.EVOLUTION_API_URL}/message`;
+const chatBaseUrl = `${env.EVOLUTION_API_URL}/chat`;
 const instance = env.EVOLUTION_INSTANCE_NAME;
 
 /** Response from Evolution API after sending a message */
@@ -19,6 +20,29 @@ export interface EvolutionMessageResponse {
 interface EvolutionApiOptions {
   endpoint: string;
   body: Record<string, unknown>;
+}
+
+/** Makes a POST request to Evolution API v2 (chat namespace) */
+async function evolutionChatPost({ endpoint, body }: EvolutionApiOptions): Promise<void> {
+  const url = `${chatBaseUrl}/${endpoint}/${instance}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: env.EVOLUTION_API_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    logger.warn("Evolution Chat API error (non-critical)", {
+      endpoint,
+      status: response.status,
+      response: text,
+    });
+  }
 }
 
 /** Makes a POST request to Evolution API v2 */
@@ -112,4 +136,32 @@ export async function sendImage(
     },
   });
   return result.key.id;
+}
+
+/**
+ * Sends a "composing" (typing) presence indicator via Evolution API v2.
+ * Non-critical — errors are logged but not thrown.
+ */
+export async function sendTypingIndicator(phone: string): Promise<void> {
+  await evolutionChatPost({
+    endpoint: "updatePresence",
+    body: {
+      number: phone,
+      presence: "composing",
+    },
+  });
+}
+
+/**
+ * Calculates a realistic typing delay based on message length.
+ * Simulates ~50ms per character, clamped between 1.5s and 5s.
+ */
+export function calculateTypingDelay(text: string): number {
+  const ms = text.length * 50;
+  return Math.max(1500, Math.min(ms, 5000));
+}
+
+/** Simple async delay utility */
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

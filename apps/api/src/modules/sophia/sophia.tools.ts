@@ -100,7 +100,7 @@ export const sophiaTools: LlmTool[] = [
     type: "function",
     function: {
       name: "handoff_to_human",
-      description: "Transfere a conversa para a Beatriz (maquiadora). Use para: noivas, serviços externos, reclamações, ou quando a cliente pedir.",
+      description: "Transfere a conversa para a Beatriz (maquiadora). Use SOMENTE para: noivas, serviços externos/a domicílio, reclamações, ou quando a cliente pedir EXPLICITAMENTE para falar com a Beatriz. NUNCA use para verificar disponibilidade ou dúvidas sobre agendamento — use check_availability para isso.",
       parameters: {
         type: "object",
         properties: {

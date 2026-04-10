@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { readFile } from "node:fs/promises";
-import { sendTextMessage, sendDocument, sendImage } from "../../lib/evolution.js";
+import { sendTextMessage, sendDocument, sendImage, sendTypingIndicator, calculateTypingDelay, delay } from "../../lib/evolution.js";
 import { sendEmail } from "../../lib/resend.js";
 import { db } from "../../config/supabase.js";
 import { messages } from "@studio/db";
@@ -9,33 +9,65 @@ import { env } from "../../config/env.js";
 import { formatBRL } from "@studio/shared/utils";
 import { getPdfCatalogPath, type CatalogTopic } from "../service/service-reference.service.js";
 
-const MAX_LINES_PER_SOPHIA_MESSAGE = 2;
+/** Messages shorter than this are never split */
+const MIN_SPLIT_LENGTH = 200;
+/** Soft character limit per chunk — paragraphs are grouped up to this size */
+const SOFT_CHUNK_LIMIT = 600;
+/** Maximum number of WhatsApp messages per Sophia response */
+const MAX_CHUNKS = 3;
+/** Patterns that indicate a structured block that must stay together */
+const STRUCTURED_BLOCK_RE = /^(✨\s*(PRE-AGENDAMENTO|AGENDAMENTO)|DADOS DA CLIENTE|PAGAMENTO|Vou confirmar seus dados)/;
 
 /**
- * Splits Sophia replies into short chunks with max 2 lines each.
+ * Splits a Sophia reply into natural WhatsApp-sized chunks.
+ *
+ * Rules:
+ * - Short messages (< MIN_SPLIT_LENGTH) are never split.
+ * - Splits on double-newline paragraph boundaries.
+ * - Keeps bullet/list blocks together.
+ * - Structured blocks (payment, booking confirmation) are never split.
+ * - Caps at MAX_CHUNKS; excess is merged into the last chunk.
  */
 export function splitSophiaMessage(content: string): string[] {
   const normalized = content.trim();
   if (!normalized) return [];
+  if (normalized.length < MIN_SPLIT_LENGTH) return [normalized];
 
-  const sentenceSegments = normalized
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .flatMap((line) =>
-      line
-        .split(/(?<=[.!?])\s+/)
-        .map((segment) => segment.trim())
-        .filter(Boolean)
-    );
+  // Structured blocks (payment, confirmation) stay as one
+  if (STRUCTURED_BLOCK_RE.test(normalized)) return [normalized];
 
-  if (sentenceSegments.length === 0) {
-    return [normalized];
-  }
+  const paragraphs = normalized
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
+  if (paragraphs.length <= 1) return [normalized];
+
+  // Group paragraphs into chunks up to SOFT_CHUNK_LIMIT
   const chunks: string[] = [];
-  for (let i = 0; i < sentenceSegments.length; i += MAX_LINES_PER_SOPHIA_MESSAGE) {
-    chunks.push(sentenceSegments.slice(i, i + MAX_LINES_PER_SOPHIA_MESSAGE).join("\n"));
+  let current = "";
+
+  for (const para of paragraphs) {
+    if (!current) {
+      current = para;
+      continue;
+    }
+
+    const combined = `${current}\n\n${para}`;
+    if (combined.length <= SOFT_CHUNK_LIMIT) {
+      current = combined;
+    } else {
+      chunks.push(current);
+      current = para;
+    }
+  }
+  if (current) chunks.push(current);
+
+  // Cap at MAX_CHUNKS — merge overflow into the last chunk
+  if (chunks.length > MAX_CHUNKS) {
+    const capped = chunks.slice(0, MAX_CHUNKS - 1);
+    capped.push(chunks.slice(MAX_CHUNKS - 1).join("\n\n"));
+    return capped;
   }
 
   return chunks;
@@ -66,8 +98,9 @@ export async function sendWhatsAppMessage(
 }
 
 /**
- * Sends Sophia reply as a single message and logs it.
- * This is used only by the Sophia conversational flow.
+ * Sends Sophia reply with humanised delivery: typing indicator,
+ * realistic delay, and natural message splitting.
+ * Logs the full content as a single DB row.
  */
 export async function sendSophiaMessage(
   phone: string,
@@ -77,22 +110,36 @@ export async function sendSophiaMessage(
   const trimmed = content.trim();
   if (!trimmed) return [];
 
-  const evolutionMsgId = await sendTextMessage(phone, trimmed);
-  const messageIds = [evolutionMsgId];
+  const chunks = splitSophiaMessage(trimmed);
+  const messageIds: string[] = [];
 
+  for (const chunk of chunks) {
+    // 1. Show "typing…" indicator (fire-and-forget)
+    await sendTypingIndicator(phone).catch(() => {});
+
+    // 2. Simulate realistic typing delay
+    await delay(calculateTypingDelay(chunk));
+
+    // 3. Send the chunk
+    const msgId = await sendTextMessage(phone, chunk);
+    messageIds.push(msgId);
+  }
+
+  // 4. Log as single message in DB (full original content)
   if (conversationId) {
     await db.insert(messages).values({
       conversationId,
       role: "sophia",
       content: trimmed,
       messageType: "text",
-      evolutionMessageId: evolutionMsgId,
+      evolutionMessageId: messageIds[0],
     });
   }
 
   logger.info("Sophia WhatsApp response sent", {
     phone,
     conversationId,
+    chunks: chunks.length,
   });
 
   return messageIds;
