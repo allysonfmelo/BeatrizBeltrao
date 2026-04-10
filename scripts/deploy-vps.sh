@@ -144,12 +144,28 @@ REMOTE
 
 echo
 log "Validando health check..."
-sleep 2
-if curl -sk -o /dev/null -w "%{http_code}" "$HEALTH_URL" | grep -q 200; then
-  ok "Health check ${HEALTH_URL} → 200 OK"
-  echo
-  ok "${BOLD}Deploy concluído com sucesso${NC}"
-else
-  err "Health check falhou em $HEALTH_URL"
-  exit 1
-fi
+# O Swarm declara "converged" antes do Traefik roteá-lo como healthy:
+# o HEALTHCHECK do container tem start-period=10s + interval=30s e a API
+# ainda roda bootstrap (Drizzle/Supabase/syncReferenceServicesToDb) antes
+# de aceitar conexões. Por isso fazemos retry com backoff em vez de um
+# único curl imediato.
+MAX_ATTEMPTS=12
+SLEEP_SECONDS=5
+code="000"
+for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" || echo "000")
+  if [ "$code" = "200" ]; then
+    ok "Health check ${HEALTH_URL} → 200 OK (tentativa ${attempt}/${MAX_ATTEMPTS})"
+    echo
+    ok "${BOLD}Deploy concluído com sucesso${NC}"
+    exit 0
+  fi
+  log "tentativa ${attempt}/${MAX_ATTEMPTS} → ${code}, aguardando ${SLEEP_SECONDS}s..."
+  sleep "$SLEEP_SECONDS"
+done
+
+err "Health check falhou em $HEALTH_URL após ${MAX_ATTEMPTS} tentativas (último status: ${code})"
+err "Últimos logs do serviço ${SERVICE_NAME}:"
+ssh -i "$SSH_KEY" -o ConnectTimeout=10 "${VPS_USER}@${VPS_HOST}" \
+  "docker service logs --tail 20 ${SERVICE_NAME} 2>&1" || true
+exit 1

@@ -92,6 +92,7 @@
   - `send_service_pdf` tests (4) — tool foi substituído por `send_website_link`
   - `booking.service > createPreBooking` (4) — mock setup problemático
   - `notification.service > sendSophiaMessage` (2) — mock de chunks
+- **Race condition do `scripts/deploy-vps.sh`**: quando o Swarm declara `converged`, o container novo ainda está dentro do `start-period=10s` do HEALTHCHECK e o Traefik ainda não o publicou como backend healthy — então um `sleep 2 + curl` falha mesmo com a API 100% OK. Aplicada correção com retry de 12×5s + comparação explícita de status code + dump de logs via SSH em caso de falha real. Antes de alterar a API, sempre reproduzir `/health` manualmente para confirmar se a falha é no validador do script ou na aplicação.
 
 ## Session 2026-03-25 — Sophia Rules & Triage
 
