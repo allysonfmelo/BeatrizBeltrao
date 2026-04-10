@@ -90,26 +90,33 @@ jobs:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
         run: npx trigger.dev@latest deploy
 
-  deploy-api:
-    name: Deploy API to VPS
-    runs-on: ubuntu-latest
-    needs: [build-and-push]
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        env:
-          IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
-          FULL_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          envs: IMAGE_TAG,FULL_IMAGE
-          script: |
-            docker pull "${FULL_IMAGE}:${IMAGE_TAG}"
-            cd /root/bb-deploy/src
-            docker service update \
-              --image "${FULL_IMAGE}:${IMAGE_TAG}" \
-              --with-registry-auth \
-              bb_api
+  # Deploy API to VPS está desabilitado: o runner do GitHub Actions não tem
+  # conectividade na porta 22 devido ao firewall externo da infra. O build da
+  # imagem Docker continua sendo publicado no GHCR por `build-and-push` acima,
+  # e o deploy na VPS é feito manualmente com:
+  #   ssh root@<vps> "docker service update --image ghcr.io/<owner>/bb-api:<tag> --with-registry-auth bb_api"
+  # Para reabilitar: resolver o bloqueio de rede (abrir porta 22, self-hosted
+  # runner ou VPN mesh) e descomentar o job abaixo.
+  #
+  # deploy-api:
+  #   name: Deploy API to VPS
+  #   runs-on: ubuntu-latest
+  #   needs: [build-and-push]
+  #   steps:
+  #     - name: Deploy via SSH
+  #       uses: appleboy/ssh-action@v1
+  #       env:
+  #         IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+  #         FULL_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+  #       with:
+  #         host: ${{ secrets.VPS_HOST }}
+  #         username: ${{ secrets.VPS_USER }}
+  #         key: ${{ secrets.VPS_SSH_KEY }}
+  #         envs: IMAGE_TAG,FULL_IMAGE
+  #         script: |
+  #           docker pull "${FULL_IMAGE}:${IMAGE_TAG}"
+  #           cd /root/bb-deploy/src
+  #           docker service update \
+  #             --image "${FULL_IMAGE}:${IMAGE_TAG}" \
+  #             --with-registry-auth \
+  #             bb_api
