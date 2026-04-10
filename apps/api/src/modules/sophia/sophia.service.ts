@@ -10,8 +10,18 @@ import { logger } from "../../lib/logger.js";
 
 const MAX_TOOL_ITERATIONS = 5;
 const NAME_PATTERN = /^[\p{L}\s]{2,}$/u;
+/**
+ * Matches any token that signals a clear commercial intent from the client.
+ * If a first message does NOT match, the service sends a hardcoded triage
+ * ("Oi, {nome}! ✨ Como posso te ajudar hoje?") instead of calling the LLM,
+ * which means the new prompt rules (including the SITE offer flow) never
+ * get a chance to run. Plural forms (`serviços`, `informações`, `preços`,
+ * `dúvidas`, `horários`) are matched via an optional `s?` OR an explicit
+ * alternation — they are EXTREMELY common in real-world first messages
+ * and their absence was caught in the first post-fix validation run.
+ */
 const CLEAR_INTENT_PATTERN =
-  /\b(servi[cç]o|maquiagem|penteado|ambos|express|sequencial|combo|noiva|extern[oa]|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]vel|hor[aá]rio|data|valor|pre[cç]o|quanto|orcamento|orçamento|pdf|cat[aá]logo|duvida|d[úu]vida)\b/i;
+  /\b(servi[cç]os?|maquiagens?|penteados?|ambos|express|sequencial|combo|noivas?|extern[oa]s?|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]ve(?:l|is)|hor[aá]rios?|datas?|valores?|pre[cç]os?|quanto|or[cç]amentos?|pdf|cat[aá]logos?|d[úu]vidas?|informa[cç][aãoõ]e?s?|mais info|saber|sobre\s+(?:os\s+)?servi[cç]os?)\b/i;
 
 /**
  * Test phone → OpenRouter model override. Phones starting with
