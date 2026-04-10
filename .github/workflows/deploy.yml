@@ -15,6 +15,7 @@ on:
       - "assets/**"
       - "docker-compose.prod.yml"
       - ".github/workflows/deploy.yml"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
