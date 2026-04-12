@@ -100,13 +100,31 @@ function extractNameFromReply(content: string): string | null {
   return sanitized;
 }
 
-function isBookingConfirmationPending(collectedData: Record<string, unknown>): boolean {
-  return collectedData.bookingConfirmationPending === true;
+/**
+ * Returns the draftKey the tool asked confirmation for, or null if no
+ * pending confirmation exists. The per-draft flags are authoritative;
+ * the legacy `bookingConfirmationPending` boolean is ignored on read.
+ */
+function getPendingConfirmationDraftKey(
+  collectedData: Record<string, unknown>
+): string | null {
+  const asked = collectedData.bookingConfirmationAskedForDraftKey;
+  const approved = collectedData.bookingConfirmationApprovedForDraftKey;
+  if (typeof asked !== "string" || !asked) return null;
+  if (typeof approved === "string" && approved === asked) return null;
+  return asked;
 }
 
+/**
+ * Matches common Portuguese affirmative replies. Expanded from the
+ * earlier regex after the real-test screenshot showed "já confirmei"
+ * (and other natural variations) missing the match and keeping the
+ * approval flag stuck at false, which in turn kept `create_booking`
+ * sending the confirmation block over and over.
+ */
 function isAffirmativeConfirmation(content: string): boolean {
   const normalized = normalizeWhitespace(content).toLowerCase();
-  return /^(sim|s|pode|pode sim|pode seguir|pode prosseguir|confirmo|correto|certo|ok|okay|isso mesmo|perfeito)[!. ]*$/.test(
+  return /^(sim|s|pode|pode sim|pode seguir|pode prosseguir|pode confirmar|confirma|confirma por favor|confirmo|confirmei|j[aá] confirmei|j[aá] confirmado|correto|certo|exato|isso|isso mesmo|isso a[ií]|com certeza|tudo certo|t[aá] certo|t[aá] certinho|t[aá] bom|beleza|perfeito|ok|okay|okkk+)[!. ✨💕]*$/.test(
     normalized
   );
 }
@@ -238,8 +256,15 @@ export async function processMessage(
     return;
   }
 
-  if (isBookingConfirmationPending(ctx.collectedData) && isAffirmativeConfirmation(normalizedContent)) {
+  // If there's a pending confirmation for a specific draftKey and the
+  // client just said "sim"/"pode"/"já confirmei"/etc., approve that
+  // exact draftKey. create_booking's next invocation will see the
+  // approval matches the current draft and proceed to the real booking.
+  const pendingDraftKey = getPendingConfirmationDraftKey(ctx.collectedData);
+  if (pendingDraftKey && isAffirmativeConfirmation(normalizedContent)) {
     const confirmationUpdates = {
+      bookingConfirmationApprovedForDraftKey: pendingDraftKey,
+      // Legacy flags kept in sync so any remaining consumers stay happy.
       bookingConfirmationPending: false,
       bookingConfirmationApproved: true,
     };
@@ -248,6 +273,10 @@ export async function processMessage(
       ...ctx.collectedData,
       ...confirmationUpdates,
     };
+    logger.info("Affirmative confirmation detected — draftKey approved", {
+      conversationId: conversation.id,
+      draftKey: pendingDraftKey,
+    });
   }
 
   const serviceReferenceSummary = buildServiceReferenceSummary();

@@ -203,6 +203,69 @@ function bookingDraftEquals(current: BookingDraft | null, next: BookingDraft): b
   return JSON.stringify(current) === JSON.stringify(next);
 }
 
+/**
+ * Canonical draft identifier. Two drafts produce the same key iff they
+ * represent the same booking request (same service UUID, same calendar
+ * date, same normalized start time, same CPF). This is the ONLY state
+ * we use to decide whether a confirmation was already asked or already
+ * approved for this exact draft — independent of which tool gets called
+ * (save_client_data, create_booking, etc.) and independent of text the
+ * LLM may paraphrase.
+ *
+ * Why a key instead of the whole draft object: the LLM passes slightly
+ * different strings for the same time ("14h" vs "14:00" vs "14h-15h")
+ * and we don't want those surface differences to invalidate a
+ * confirmation the client already gave. The key normalizes time + cpf
+ * digits before hashing.
+ */
+function normalizeTimeForKey(time: string): string {
+  // Extract first HH:MM or HH from the string and pad to HH:MM.
+  const hhmm = time.match(/(\d{1,2}):(\d{2})/);
+  if (hhmm) {
+    return `${hhmm[1].padStart(2, "0")}:${hhmm[2]}`;
+  }
+  const hOnly = time.match(/(\d{1,2})\s*h/i);
+  if (hOnly) {
+    return `${hOnly[1].padStart(2, "0")}:00`;
+  }
+  // Fallback: strip non-digits, take first 4 → pad to HH:MM
+  const digits = time.replace(/\D/g, "");
+  if (digits.length >= 3) {
+    const hh = digits.slice(0, 2).padStart(2, "0");
+    const mm = digits.length >= 4 ? digits.slice(2, 4) : "00";
+    return `${hh}:${mm}`;
+  }
+  return time.trim();
+}
+
+function computeDraftKey(draft: BookingDraft): string {
+  const parts = [
+    draft.serviceId.trim(),
+    draft.scheduledDate.trim(),
+    normalizeTimeForKey(draft.scheduledTime),
+    draft.clientCpf.replace(/\D/g, ""),
+  ];
+  return parts.join("|");
+}
+
+/**
+ * Reads the per-draft confirmation flags. Each flag stores the draftKey
+ * it was set for, or `null` when cleared. A flag "matches" the current
+ * draft iff its stored value equals the current draftKey.
+ */
+function getConfirmationFlags(collectedData: Record<string, unknown>): {
+  askedForKey: string | null;
+  approvedForKey: string | null;
+} {
+  const raw = collectedData as Record<string, unknown>;
+  const ask = raw.bookingConfirmationAskedForDraftKey;
+  const app = raw.bookingConfirmationApprovedForDraftKey;
+  return {
+    askedForKey: typeof ask === "string" && ask ? ask : null,
+    approvedForKey: typeof app === "string" && app ? app : null,
+  };
+}
+
 function buildBookingConfirmationMessage(draft: BookingDraft): string {
   const firstName = draft.clientName.trim().split(/\s+/)[0] ?? draft.clientName;
   return [
@@ -419,21 +482,27 @@ async function executeSaveClientData(
   if (data.cpf) updates.clientCpf = data.cpf.replace(/\D/g, "");
   if (data.email) updates.clientEmail = data.email;
 
-  // Merge with existing collected data
+  // Merge with existing collected data. The booking-confirmation flags
+  // are NOT touched here — this was the source of the confirmation loop
+  // observed in production: every time save_client_data ran (even with
+  // the same data), it reset the approval and re-sent the block, so
+  // after the client said "sim" the next LLM iteration could trigger
+  // save_client_data again and wipe the approval. The draftKey-based
+  // flags (set by create_booking) are the single source of truth for
+  // confirmation state now. Approval is only invalidated when the
+  // draftKey itself changes, which create_booking detects on its own.
   const merged = { ...ctx.collectedData, ...updates };
-  const bookingDraft = getBookingDraft(merged);
-  const persistedUpdates = bookingDraft
+  const bookingDraftFromMerged = getBookingDraft(merged);
+  const persistedUpdates: Record<string, unknown> = bookingDraftFromMerged
     ? {
         ...updates,
         bookingDraft: {
-          ...bookingDraft,
-          clientName: (merged.clientName as string | undefined) ?? bookingDraft.clientName,
-          clientCpf: (merged.clientCpf as string | undefined) ?? bookingDraft.clientCpf,
-          clientEmail: (merged.clientEmail as string | undefined) ?? bookingDraft.clientEmail,
+          ...bookingDraftFromMerged,
+          clientName: (merged.clientName as string | undefined) ?? bookingDraftFromMerged.clientName,
+          clientCpf: (merged.clientCpf as string | undefined) ?? bookingDraftFromMerged.clientCpf,
+          clientEmail: (merged.clientEmail as string | undefined) ?? bookingDraftFromMerged.clientEmail,
           clientPhone: ctx.phone,
         },
-        bookingConfirmationPending: true,
-        bookingConfirmationApproved: false,
       }
     : updates;
 
@@ -541,12 +610,50 @@ async function executeCreateBooking(
     clientEmail: client.email,
     clientPhone: client.phone,
   };
-  const currentDraft = getBookingDraft(ctx.collectedData);
-  const confirmationApproved = ctx.collectedData.bookingConfirmationApproved === true;
+  const draftKey = computeDraftKey(bookingDraft);
+  const flags = getConfirmationFlags(ctx.collectedData);
+  const alreadyApprovedForThisDraft = flags.approvedForKey === draftKey;
+  const alreadyAskedForThisDraft = flags.askedForKey === draftKey;
 
-  if (!confirmationApproved || !bookingDraftEquals(currentDraft, bookingDraft)) {
+  // Case A — approved for this exact draftKey → proceed to booking. The
+  // persisted draft is the source of truth; any paraphrased time/service
+  // variations from the model pointing at the same key are treated as
+  // the same request.
+  if (alreadyApprovedForThisDraft) {
     await persistCollectedData(ctx, {
       bookingDraft,
+      bookingDraftKey: draftKey,
+      // Keep flags as they are — approval stays approved.
+    });
+  } else if (alreadyAskedForThisDraft) {
+    // Case B — we already sent the confirmation block for this exact
+    // draft and the client hasn't approved yet. DO NOT re-send it —
+    // this was the "loop de confirmação" bug. Return a neutral result
+    // so the LLM can just stop emitting text (the prompt tells it to).
+    await persistCollectedData(ctx, {
+      bookingDraft,
+      bookingDraftKey: draftKey,
+    });
+    return JSON.stringify({
+      success: false,
+      confirmationStillPending: true,
+      draftKey,
+      message:
+        "A confirmação deste agendamento já foi enviada à cliente anteriormente. Aguarde uma resposta afirmativa explícita (sim, pode, confirmo, já confirmei, etc.) antes de chamar create_booking novamente. NÃO escreva o bloco de confirmação como texto; ele já foi enviado pelo sistema.",
+    });
+  } else {
+    // Case C — first time we see this draftKey (or it's different from a
+    // previously approved one). Send the confirmation block ONCE, mark
+    // this key as asked, and clear any stale approval for a different
+    // key. The client's next affirmative response approves THIS key.
+    await persistCollectedData(ctx, {
+      bookingDraft,
+      bookingDraftKey: draftKey,
+      bookingConfirmationAskedForDraftKey: draftKey,
+      // Clear any stale approval for a previous draftKey.
+      bookingConfirmationApprovedForDraftKey: null,
+      // Legacy flags (kept for backward-compat with any surviving
+      // consumers, but the draftKey flags above are authoritative).
       bookingConfirmationPending: true,
       bookingConfirmationApproved: false,
     });
@@ -562,10 +669,9 @@ async function executeCreateBooking(
     return JSON.stringify({
       success: false,
       confirmationRequired: true,
+      draftKey,
       message:
-        "A confirmação final do agendamento foi solicitada à cliente. Aguarde a aprovação explícita antes de criar o pré-agendamento.",
-      confirmationMessage,
-      bookingDraft,
+        "A confirmação final foi solicitada à cliente AGORA. Aguarde a resposta afirmativa explícita antes de chamar create_booking novamente. NÃO escreva o bloco de confirmação como texto; o sistema já enviou.",
     });
   }
 
