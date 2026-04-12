@@ -116,15 +116,40 @@ function getPendingConfirmationDraftKey(
 }
 
 /**
- * Matches common Portuguese affirmative replies. Expanded from the
- * earlier regex after the real-test screenshot showed "já confirmei"
- * (and other natural variations) missing the match and keeping the
- * approval flag stuck at false, which in turn kept `create_booking`
- * sending the confirmation block over and over.
+ * Detects Portuguese affirmative replies that should approve a pending
+ * booking confirmation. The earlier version used `^...$` anchors which
+ * failed on compound replies with punctuation — "Sim, pode confirmar"
+ * did not match because the comma broke the anchor, so the approval
+ * flag stayed false and the confirmation loop kept going.
+ *
+ * New approach:
+ *   1. Reject messages longer than 80 chars (they're probably not pure
+ *      affirmatives — real users write short confirmations).
+ *   2. Reject messages containing a negation cue ("não", "espera",
+ *      "aguarda", "cancela", "mudei", etc.) — even if they also
+ *      contain a "sim" elsewhere, the intent is not pure approval.
+ *   3. Otherwise match any affirmative keyword that appears as a
+ *      complete word (`\b` anchors). This catches "Sim, pode confirmar",
+ *      "Pode confirmar por favor", "Já confirmei!!", "Tudo certo então",
+ *      "Beleza, pode seguir", "Ok, confirmo", etc.
  */
 function isAffirmativeConfirmation(content: string): boolean {
   const normalized = normalizeWhitespace(content).toLowerCase();
-  return /^(sim|s|pode|pode sim|pode seguir|pode prosseguir|pode confirmar|confirma|confirma por favor|confirmo|confirmei|j[aá] confirmei|j[aá] confirmado|correto|certo|exato|isso|isso mesmo|isso a[ií]|com certeza|tudo certo|t[aá] certo|t[aá] certinho|t[aá] bom|beleza|perfeito|ok|okay|okkk+)[!. ✨💕]*$/.test(
+
+  if (normalized.length === 0 || normalized.length > 80) return false;
+
+  // Questions are almost always requests, not approvals. Reject anything
+  // ending with a question mark or with interrogative words.
+  if (/[?]/.test(normalized)) return false;
+  if (/^(qual|quando|como|onde|por que|por q|pq|quanto|quantos?|quem|ser[áa]|posso|poderia)\b/.test(normalized)) {
+    return false;
+  }
+
+  if (/\b(n[aã]o|jamais|nunca|espera|aguarda|pera|um momento|s[oó]\s+um|cancela|mudei|mudei de ideia|troca|trocar|altera|alterar|outro|outra)\b/.test(normalized)) {
+    return false;
+  }
+
+  return /\b(sim|pode|pode seguir|pode prosseguir|pode confirmar|pode finalizar|pode marcar|confirma|confirmo|confirmei|confirmado|j[aá] confirmei|correto|certo|certinho|exato|isso|isso mesmo|com certeza|tudo certo|t[aá] certo|t[aá] certinho|t[aá] bom|beleza|perfeito|manda|finaliza|confere|conferido)\b/.test(
     normalized
   );
 }
