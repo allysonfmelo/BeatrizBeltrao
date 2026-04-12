@@ -27,8 +27,28 @@ interface CollectedData {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const SYSTEM_MD = readFileSync(join(__dirname, "sophia.system.md"), "utf-8");
-const RUNTIME_MD = readFileSync(join(__dirname, "sophia.runtime.md"), "utf-8");
+function loadPromptFile(filename: string): string {
+  const candidates = [
+    join(__dirname, filename),
+    join(process.cwd(), filename),
+    join(process.cwd(), "src", "modules", "sophia", filename),
+    join(process.cwd(), "dist", "modules", "sophia", filename),
+    join("/app", filename),
+    join("/app", "src", "modules", "sophia", filename),
+    join("/app", "dist", "modules", "sophia", filename),
+  ];
+  for (const p of candidates) {
+    try {
+      return readFileSync(p, "utf-8");
+    } catch {
+      // try next
+    }
+  }
+  throw new Error(`Unable to locate prompt file ${filename}. Tried: ${candidates.join(", ")}`);
+}
+
+const SYSTEM_MD = loadPromptFile("sophia.system.md");
+const RUNTIME_MD = loadPromptFile("sophia.runtime.md");
 
 const WEEKDAYS = [
   "domingo",
