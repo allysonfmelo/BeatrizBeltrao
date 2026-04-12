@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-prompts.mjs",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
