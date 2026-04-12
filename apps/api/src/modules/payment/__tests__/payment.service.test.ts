@@ -100,6 +100,10 @@ vi.mocked(supabase).db = mockDb as unknown as typeof supabase.db;
 vi.mocked(asaas.createCustomer).mockResolvedValue(mockAsaasCustomer);
 vi.mocked(asaas.createCharge).mockResolvedValue(mockAsaasCharge);
 vi.mocked(asaas.cancelPayment).mockResolvedValue(undefined);
+vi.mocked(bookingService.findById).mockResolvedValue({
+  id: mockPaymentRecord.bookingId,
+  status: "pendente",
+} as never);
 vi.mocked(bookingService.confirmBooking).mockResolvedValue(undefined as never);
 
 // ---------------------------------------------------------------------------
@@ -127,6 +131,10 @@ describe("payment.service", () => {
     vi.mocked(asaas.createCustomer).mockResolvedValue(mockAsaasCustomer);
     vi.mocked(asaas.createCharge).mockResolvedValue(mockAsaasCharge);
     vi.mocked(asaas.cancelPayment).mockResolvedValue(undefined);
+    vi.mocked(bookingService.findById).mockResolvedValue({
+      id: mockPaymentRecord.bookingId,
+      status: "pendente",
+    } as never);
     vi.mocked(bookingService.confirmBooking).mockResolvedValue(undefined as never);
 
     // Reset db defaults
@@ -224,16 +232,39 @@ describe("payment.service", () => {
       );
     });
 
-    it("ignora processamento quando o pagamento já está com status confirmado", async () => {
+    it("ignora processamento quando pagamento e booking já estão confirmados", async () => {
       mockDb.query.payments.findFirst.mockResolvedValue({
         ...mockPaymentRecord,
         status: "confirmado",
       });
+      vi.mocked(bookingService.findById).mockResolvedValue({
+        id: mockPaymentRecord.bookingId,
+        status: "confirmado",
+      } as never);
 
       await processPaymentConfirmation("pay_123");
 
       expect(mockDb.update).not.toHaveBeenCalled();
       expect(bookingService.confirmBooking).not.toHaveBeenCalled();
+    });
+
+    it("retenta confirmBooking quando o pagamento já está confirmado mas o booking ainda está pendente", async () => {
+      mockDb.query.payments.findFirst.mockResolvedValue({
+        ...mockPaymentRecord,
+        status: "confirmado",
+      });
+      vi.mocked(bookingService.findById).mockResolvedValue({
+        id: mockPaymentRecord.bookingId,
+        status: "pendente",
+      } as never);
+
+      await processPaymentConfirmation("pay_123", "PIX");
+
+      expect(mockDb.update).not.toHaveBeenCalled();
+      expect(bookingService.confirmBooking).toHaveBeenCalledWith(
+        mockPaymentRecord.bookingId,
+        "pix"
+      );
     });
 
     it("ignora processamento e não lança erro quando o pagamento não é encontrado", async () => {
@@ -280,6 +311,21 @@ describe("payment.service", () => {
 
       const setArg = updateChain.set.mock.calls[0][0];
       expect(setArg.method).toBeNull();
+    });
+
+    it("não chama confirmBooking de novo quando o booking já está confirmado no processamento atual", async () => {
+      mockDb.query.payments.findFirst.mockResolvedValue(mockPaymentRecord);
+      const updateChain = mockUpdateChain();
+      mockDb.update.mockReturnValue(updateChain);
+      vi.mocked(bookingService.findById).mockResolvedValue({
+        id: mockPaymentRecord.bookingId,
+        status: "confirmado",
+      } as never);
+
+      await processPaymentConfirmation("pay_123");
+
+      expect(mockDb.update).toHaveBeenCalledOnce();
+      expect(bookingService.confirmBooking).not.toHaveBeenCalled();
     });
   });
 

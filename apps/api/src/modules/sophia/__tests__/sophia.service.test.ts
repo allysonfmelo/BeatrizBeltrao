@@ -319,7 +319,7 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(executeTool)).toHaveBeenCalledTimes(5);
 
     const fallback =
-      "Desculpe, estou com uma dificuldade técnica no momento. Vou chamar a Beatriz para te ajudar! ✨";
+      "Um segundinho, deixa eu conferir aqui pra você e já te respondo direitinho ✨";
 
     // Fallback must be dispatched via WhatsApp
     expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
@@ -328,12 +328,7 @@ describe("sophia.service — processMessage", () => {
       CONVERSATION_ID
     );
 
-    // Handoff must be set with the exact reason string from the service
-    expect(vi.mocked(sophiaContext.setHandoff)).toHaveBeenCalledOnce();
-    expect(vi.mocked(sophiaContext.setHandoff)).toHaveBeenCalledWith(
-      CONVERSATION_ID,
-      "Max tool iterations reached"
-    );
+    expect(vi.mocked(sophiaContext.setHandoff)).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -419,6 +414,58 @@ describe("sophia.service — processMessage", () => {
       expect.objectContaining({
         firstMessageCategory: "cta_bridal",
       })
+    );
+  });
+
+  it("stops the loop immediately after send_website_link responds to the client", async () => {
+    const toolCall = {
+      id: "call-site",
+      name: "send_website_link",
+      arguments: {},
+    };
+
+    vi.mocked(sendMessage).mockResolvedValueOnce({
+      content: null,
+      toolCalls: [toolCall],
+    });
+    vi.mocked(executeTool).mockImplementation(async (_toolCall, ctx) => {
+      ctx.websiteLinkAlreadySent = true;
+      ctx.websiteLinkJustSent = true;
+      return JSON.stringify({ success: true });
+    });
+
+    await processMessage(PHONE, "Quero mais informações");
+
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(notificationService.sendSophiaMessage)).not.toHaveBeenCalled();
+  });
+
+  it("marks booking confirmation as approved when the client replies affirmatively", async () => {
+    vi.mocked(sophiaContext.loadContext).mockResolvedValueOnce({
+      ...baseContext,
+      firstClientMessage: "Quero agendar maquiagem social",
+      collectedData: {
+        bookingConfirmationPending: true,
+        bookingConfirmationApproved: false,
+      },
+      messageHistory: [
+        { role: "user", content: "Quero agendar maquiagem social" },
+        { role: "user", content: "Pode seguir" },
+      ],
+    } as never);
+    vi.mocked(sendMessage).mockResolvedValueOnce({
+      content: "Perfeito! Vou seguir com o pré-agendamento. ✨",
+      toolCalls: [],
+    });
+
+    await processMessage(PHONE, "Pode seguir");
+
+    expect(vi.mocked(sophiaContext.updateCollectedData)).toHaveBeenCalledWith(
+      CONVERSATION_ID,
+      {
+        bookingConfirmationPending: false,
+        bookingConfirmationApproved: true,
+      }
     );
   });
 });

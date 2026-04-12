@@ -170,11 +170,6 @@ export async function processPaymentConfirmation(
     return;
   }
 
-  if (payment.status === "confirmado") {
-    logger.info("Payment already confirmed, skipping", { asaasPaymentId });
-    return;
-  }
-
   // Map ASAAS billing type to our payment method
   const methodMap: Record<string, "pix" | "credito" | "debito"> = {
     PIX: "pix",
@@ -182,6 +177,25 @@ export async function processPaymentConfirmation(
     DEBIT_CARD: "debito",
   };
   const method = billingType ? methodMap[billingType] ?? null : null;
+  const booking = await bookingService.findById(payment.bookingId);
+
+  if (payment.status === "confirmado") {
+    if (booking?.status === "confirmado") {
+      logger.info("Payment and booking already confirmed, skipping", {
+        asaasPaymentId,
+        bookingId: payment.bookingId,
+      });
+      return;
+    }
+
+    logger.warn("Payment already confirmed but booking is not confirmed, retrying downstream flow", {
+      asaasPaymentId,
+      bookingId: payment.bookingId,
+      bookingStatus: booking?.status ?? "not_found",
+    });
+    await bookingService.confirmBooking(payment.bookingId, method ?? undefined);
+    return;
+  }
 
   // Update payment record
   await db
@@ -201,6 +215,14 @@ export async function processPaymentConfirmation(
   });
 
   // Confirm the booking (creates calendar event + sends notifications)
+  if (booking?.status === "confirmado") {
+    logger.info("Booking already confirmed while processing payment confirmation", {
+      paymentId: payment.id,
+      bookingId: payment.bookingId,
+    });
+    return;
+  }
+
   await bookingService.confirmBooking(payment.bookingId, method ?? undefined);
 }
 

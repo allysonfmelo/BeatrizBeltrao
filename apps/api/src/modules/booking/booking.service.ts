@@ -94,6 +94,13 @@ async function findByIdRaw(id: string) {
 export async function confirmBooking(bookingId: string, paymentMethod?: string) {
   const booking = await findByIdRaw(bookingId);
   if (!booking) throw new Error("Booking não encontrado");
+  if (booking.status === "confirmado") {
+    logger.info("Booking already confirmed, skipping status transition", {
+      bookingId,
+      paymentMethod,
+    });
+    return booking;
+  }
   if (booking.status !== "pendente") throw new Error(`Booking não está pendente (status: ${booking.status})`);
 
   const client = await db.query.clients.findFirst({
@@ -135,19 +142,15 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
 
   logger.info("Booking confirmed", { bookingId, eventId, paymentMethod });
 
-  // Send notifications
+  const paymentMethodLabel = paymentMethod
+    ? {
+        pix: "Pix",
+        credito: "Cartão de crédito",
+        debito: "Cartão de débito",
+      }[paymentMethod] ?? "Pagamento confirmado"
+    : "Pagamento confirmado";
+
   try {
-    const paymentMethodLabel = paymentMethod
-      ? {
-          pix: "Pix",
-          credito: "Cartão de crédito",
-          debito: "Cartão de débito",
-        }[paymentMethod] ?? "Pagamento confirmado"
-      : "Pagamento confirmado";
-
-    const totalPrice = parseFloat(booking.totalPrice).toFixed(2);
-    const depositAmount = parseFloat(booking.depositAmount).toFixed(2);
-
     await notificationService.sendBookingConfirmationWithImages(client.phone, {
       clientName: client.fullName,
       serviceName: service.name,
@@ -157,7 +160,15 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
       depositAmount: booking.depositAmount,
       paymentMethod: paymentMethodLabel,
     });
+    logger.info("Booking confirmation WhatsApp media sent", { bookingId, phone: client.phone });
+  } catch (error) {
+    logger.error("Failed to send booking confirmation WhatsApp media", {
+      bookingId,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
 
+  try {
     await notificationService.sendBookingConfirmationEmail(client.email, {
       clientName: client.fullName,
       serviceName: service.name,
@@ -166,13 +177,22 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
       totalPrice: parseFloat(booking.totalPrice) * 100,
       depositAmount: parseFloat(booking.depositAmount) * 100,
     });
+    logger.info("Booking confirmation email sent after payment", { bookingId, email: client.email });
+  } catch (error) {
+    logger.error("Failed to send booking confirmation email", {
+      bookingId,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
 
+  try {
     await notificationService.notifyMaquiadora(
       "Novo Agendamento Confirmado",
       `Cliente: ${client.fullName}\nTelefone: ${client.phone}\nServiço: ${service.name}\nData: ${booking.scheduledDate}\nHorário: ${booking.scheduledTime}`
     );
+    logger.info("Maquiadora notified after booking confirmation", { bookingId });
   } catch (error) {
-    logger.error("Failed to send confirmation notifications", {
+    logger.error("Failed to notify maquiadora about confirmed booking", {
       bookingId,
       error: error instanceof Error ? error.message : "Unknown",
     });

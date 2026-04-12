@@ -31,7 +31,7 @@ export interface SophiaContext {
   messageHistory: LlmMessage[];
 }
 
-function classifyFirstClientMessage(content: string): FirstMessageCategory {
+export function classifyFirstClientMessage(content: string): FirstMessageCategory {
   const normalized = content.trim();
 
   if (!normalized) return "direct";
@@ -44,7 +44,11 @@ function classifyFirstClientMessage(content: string): FirstMessageCategory {
     return "cta_bridal";
   }
 
-  if (/\bd[úu]vida(?:s)?\b/i.test(normalized)) {
+  if (
+    /\b(d[úu]vida(?:s)?|me explica|explica melhor|quero entender melhor|entender melhor)\b/i.test(
+      normalized
+    )
+  ) {
     return "cta_question";
   }
 
@@ -57,7 +61,7 @@ function classifyFirstClientMessage(content: string): FirstMessageCategory {
   }
 
   if (
-    /(gostaria de agendar um hor[aá]rio|gostaria de solicitar um or[cç]amento|gostaria de agendar um or[cç]amento)/i.test(
+    /(gostaria de agendar um hor[aá]rio|gostaria de solicitar um or[cç]amento|gostaria de agendar um or[cç]amento|quero or[cç]amento|quanto custa|quais os valores|quero saber mais|mais informa[cç][aã]o(?:es)?|mais detalhes)/i.test(
       normalized
     )
   ) {

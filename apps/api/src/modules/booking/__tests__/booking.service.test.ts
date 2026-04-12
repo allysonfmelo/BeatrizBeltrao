@@ -83,6 +83,14 @@ function mockUpdateChainNoReturn() {
   };
 }
 
+function mockSelectChainForConflictCheck(returnValue: unknown[]) {
+  return {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue(returnValue),
+  };
+}
+
 /**
  * Chain for queries that end at .offset() — used by listBookings.
  * Shape: select().from().leftJoin().leftJoin().where().orderBy().limit().offset()
@@ -181,9 +189,11 @@ describe("booking.service", () => {
 
     vi.mocked(calendarService.createBookingEvent).mockResolvedValue("cal-event-1");
     vi.mocked(calendarService.deleteBookingEvent).mockResolvedValue(undefined);
+    vi.mocked(notificationService.sendBookingConfirmationWithImages).mockResolvedValue(undefined);
     vi.mocked(notificationService.sendBookingConfirmationEmail).mockResolvedValue(undefined);
     vi.mocked(notificationService.notifyMaquiadora).mockResolvedValue(undefined);
     vi.mocked(notificationService.sendWhatsAppMessage).mockResolvedValue("msg-id");
+    mockDb.select.mockReturnValue(mockSelectChainForConflictCheck([]));
   });
 
   // -------------------------------------------------------------------------
@@ -287,10 +297,14 @@ describe("booking.service", () => {
         })
       );
 
-      expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledOnce();
-      expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledWith(
+      expect(notificationService.sendBookingConfirmationWithImages).toHaveBeenCalledOnce();
+      expect(notificationService.sendBookingConfirmationWithImages).toHaveBeenCalledWith(
         "5511999990000",
-        expect.stringContaining("Agendamento confirmado")
+        expect.objectContaining({
+          clientName: "Ana Clara",
+          serviceName: "Maquiagem Noiva",
+          paymentMethod: "Pix",
+        })
       );
 
       expect(notificationService.sendBookingConfirmationEmail).toHaveBeenCalledOnce();
@@ -314,13 +328,17 @@ describe("booking.service", () => {
       );
     });
 
-    it("lança erro quando booking não está com status pendente", async () => {
+    it("retorna o booking atual quando ele já está confirmado", async () => {
       mockDb.query.bookings.findFirst.mockResolvedValue({
         ...mockBookingPendente,
         status: "confirmado",
       });
 
-      await expect(confirmBooking("booking-1")).rejects.toThrow("Booking não está pendente");
+      const result = await confirmBooking("booking-1");
+
+      expect(result.status).toBe("confirmado");
+      expect(mockDb.update).not.toHaveBeenCalled();
+      expect(notificationService.sendBookingConfirmationWithImages).not.toHaveBeenCalled();
     });
 
     it("confirma booking mesmo quando a criação do evento no calendar falha", async () => {
@@ -339,6 +357,22 @@ describe("booking.service", () => {
       // Booking confirmed even without a calendar event
       expect(result.status).toBe("confirmado");
       expect(mockDb.update).toHaveBeenCalledOnce();
+    });
+
+    it("continua com email e notificação da maquiadora quando a mídia do WhatsApp falha", async () => {
+      mockDb.query.bookings.findFirst.mockResolvedValue(mockBookingPendente);
+      mockDb.query.clients.findFirst.mockResolvedValue(mockClient);
+      mockDb.query.services.findFirst.mockResolvedValue(mockService);
+      mockDb.update.mockReturnValue(mockUpdateChain(mockBookingConfirmado));
+      vi.mocked(notificationService.sendBookingConfirmationWithImages).mockRejectedValue(
+        new Error("sendMedia falhou")
+      );
+
+      const result = await confirmBooking("booking-1", "pix");
+
+      expect(result.status).toBe("confirmado");
+      expect(notificationService.sendBookingConfirmationEmail).toHaveBeenCalledOnce();
+      expect(notificationService.notifyMaquiadora).toHaveBeenCalledOnce();
     });
   });
 

@@ -27,8 +27,10 @@ import {
   sendWhatsAppMessage,
   sendSophiaMessage,
   splitSophiaMessage,
+  normalizeWhatsAppFormatting,
   sendWhatsAppServicePdf,
   sendBookingConfirmationEmail,
+  sendBookingConfirmationWithImages,
   notifyBookingCancelled,
   notifyMaquiadora,
 } from "../notification.service.js";
@@ -72,6 +74,10 @@ describe("notification.service", () => {
 
     vi.mocked(evolutionLib.sendTextMessage).mockResolvedValue("evo-msg-id");
     vi.mocked(evolutionLib.sendDocument).mockResolvedValue("evo-doc-id");
+    vi.mocked(evolutionLib.sendImage).mockResolvedValue("evo-img-id");
+    vi.mocked(evolutionLib.sendTypingIndicator).mockResolvedValue(undefined);
+    vi.mocked(evolutionLib.calculateTypingDelay).mockReturnValue(0);
+    vi.mocked(evolutionLib.delay).mockResolvedValue(undefined);
     vi.mocked(resendLib.sendEmail).mockResolvedValue(undefined);
     vi.mocked(readFile).mockResolvedValue(Buffer.from("fake-pdf"));
     vi.mocked(getPdfCatalogPath).mockReturnValue("/tmp/catalog.pdf");
@@ -126,27 +132,35 @@ describe("notification.service", () => {
   // -------------------------------------------------------------------------
 
   describe("sendSophiaMessage", () => {
-    it("quebra respostas longas em blocos de no máximo 2 linhas", async () => {
-      const content =
-        "Linha 1.\nLinha 2.\nLinha 3.\nLinha 4.";
+    it("quebra respostas longas em blocos por parágrafos quando excedem o limite", async () => {
+      const content = [
+        "A".repeat(250),
+        "B".repeat(250),
+        "C".repeat(250),
+      ].join("\n\n");
 
       const chunks = splitSophiaMessage(content);
       expect(chunks).toEqual([
-        "Linha 1.\nLinha 2.",
-        "Linha 3.\nLinha 4.",
+        `${"A".repeat(250)}\n\n${"B".repeat(250)}`,
+        "C".repeat(250),
       ]);
     });
 
-    it("envia todos os chunks e persiste cada envio no histórico", async () => {
+    it("envia todos os chunks e persiste a resposta completa uma única vez no histórico", async () => {
       const ids = await sendSophiaMessage(
         "5511999990000",
-        "Mensagem 1.\nMensagem 2.\nMensagem 3.",
+        ["A".repeat(250), "B".repeat(250), "C".repeat(250)].join("\n\n"),
         "conv-uuid-1"
       );
 
       expect(ids).toEqual(["evo-msg-id", "evo-msg-id"]);
       expect(evolutionLib.sendTextMessage).toHaveBeenCalledTimes(2);
-      expect(mockDb.insert).toHaveBeenCalledTimes(2);
+      expect(evolutionLib.sendTypingIndicator).toHaveBeenCalledTimes(2);
+      expect(mockDb.insert).toHaveBeenCalledTimes(1);
+    });
+
+    it("normaliza negrito de markdown para o formato do WhatsApp", () => {
+      expect(normalizeWhatsAppFormatting("Olá **Ana**")).toBe("Olá *Ana*");
     });
   });
 
@@ -200,6 +214,25 @@ describe("notification.service", () => {
       expect(html).toContain("Maquiagem de Noiva");
       expect(html).toContain("2099-12-31");
       expect(html).toContain("10:00");
+    });
+  });
+
+  describe("sendBookingConfirmationWithImages", () => {
+    it("envia duas imagens com as legendas de confirmação e orientações", async () => {
+      await sendBookingConfirmationWithImages("5511999990000", {
+        clientName: "Ana Clara Souza",
+        serviceName: "Maquiagem Social",
+        scheduledDate: "2099-12-31",
+        scheduledTime: "10:00",
+        totalPrice: "250.00",
+        depositAmount: "75.00",
+        paymentMethod: "Pix",
+      });
+
+      expect(evolutionLib.sendImage).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(evolutionLib.sendImage).mock.calls[0]?.[1]).toContain("data:image/png;base64,");
+      expect(vi.mocked(evolutionLib.sendImage).mock.calls[0]?.[2]).toContain("AGENDAMENTO CONFIRMADO");
+      expect(vi.mocked(evolutionLib.sendImage).mock.calls[1]?.[2]).toContain("*Nosso endereço:*");
     });
   });
 

@@ -18,6 +18,15 @@ const MAX_CHUNKS = 3;
 /** Patterns that indicate a structured block that must stay together */
 const STRUCTURED_BLOCK_RE = /^(✨\s*(PRE-AGENDAMENTO|AGENDAMENTO)|DADOS DA CLIENTE|PAGAMENTO|Vou confirmar seus dados)/;
 
+/** WhatsApp bold uses single asterisks; collapse markdown-style double asterisks. */
+export function normalizeWhatsAppFormatting(content: string): string {
+  let normalized = content;
+  while (normalized.includes("**")) {
+    normalized = normalized.replace(/\*\*/g, "*");
+  }
+  return normalized;
+}
+
 /**
  * Test phone prefix: conversations coming from numbers starting with this
  * prefix are treated as internal test scenarios. For these:
@@ -99,6 +108,8 @@ export async function sendWhatsAppMessage(
   content: string,
   conversationId?: string
 ): Promise<string> {
+  const normalizedContent = normalizeWhatsAppFormatting(content.trim());
+
   // Test phones: persist to DB but skip Evolution (prefix is not a real WhatsApp number).
   if (isTestPhone(phone)) {
     const fakeMsgId = `test_${Date.now()}`;
@@ -106,7 +117,7 @@ export async function sendWhatsAppMessage(
       await db.insert(messages).values({
         conversationId,
         role: "sophia",
-        content,
+        content: normalizedContent,
         messageType: "text",
         evolutionMessageId: fakeMsgId,
       });
@@ -115,13 +126,13 @@ export async function sendWhatsAppMessage(
     return fakeMsgId;
   }
 
-  const evolutionMsgId = await sendTextMessage(phone, content);
+  const evolutionMsgId = await sendTextMessage(phone, normalizedContent);
 
   if (conversationId) {
     await db.insert(messages).values({
       conversationId,
       role: "sophia",
-      content,
+      content: normalizedContent,
       messageType: "text",
       evolutionMessageId: evolutionMsgId,
     });
@@ -141,7 +152,7 @@ export async function sendSophiaMessage(
   content: string,
   conversationId?: string
 ): Promise<string[]> {
-  const trimmed = content.trim();
+  const trimmed = normalizeWhatsAppFormatting(content.trim());
   if (!trimmed) return [];
 
   const chunks = splitSophiaMessage(trimmed);
@@ -306,7 +317,7 @@ export async function notifyMaquiadora(
   details: string
 ): Promise<void> {
   if (env.MAQUIADORA_PHONE) {
-    await sendTextMessage(env.MAQUIADORA_PHONE, `${subject}\n\n${details}`);
+    await sendWhatsAppMessage(env.MAQUIADORA_PHONE, `${subject}\n\n${details}`);
   }
 
   if (env.MAQUIADORA_EMAIL) {
@@ -370,6 +381,11 @@ export async function sendBookingConfirmationWithImages(
   ].join("\n");
 
   await sendImage(phone, confirmMedia, confirmCaption);
+  logger.info("Booking confirmation image step sent", {
+    phone,
+    step: "agendamento-confirmado",
+    service: data.serviceName,
+  });
 
   // 2. Send "Aviso" image with address + care instructions
   const avisoImgBuffer = await readFile(join(assetsDir, "aviso.png"));
@@ -398,6 +414,11 @@ export async function sendBookingConfirmationWithImages(
   ].join("\n");
 
   await sendImage(phone, avisoMedia, avisoCaption);
+  logger.info("Booking confirmation image step sent", {
+    phone,
+    step: "aviso",
+    service: data.serviceName,
+  });
 
   logger.info("Booking confirmation images sent", { phone, service: data.serviceName });
 }

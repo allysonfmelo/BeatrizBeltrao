@@ -121,3 +121,15 @@
   - `pnpm --filter @studio/api test -- sophia` passa com 34/34 testes.
   - `pnpm --filter @studio/api typecheck` passa.
   - A infraestrutura de envio de PDF ainda existe em `notification.service.ts`, mas não faz mais parte do contrato da Sophia.
+
+## Session 2026-04-12 — Sophia Booking Confirmation + E2E Harness
+
+- Causa real do reenvio do site: não era só prompt. A tool `send_website_link` já respondia à cliente, mas o loop de `processMessage` continuava e o `systemPrompt` não era reconstruído com `websiteLinkAlreadySent` atualizado. Correção aplicada: rebuild do prompt por iteração + sincronização de `ctx.collectedData` + flag transitória `websiteLinkJustSent`.
+- A confirmação final do agendamento precisa ser tratada como estado operacional, não só instrução textual. Correção aplicada: `bookingDraft`, `bookingConfirmationPending` e `bookingConfirmationApproved` vivem em `conversations.collectedData`; `create_booking` agora bloqueia a criação até confirmação explícita da cliente para aquele snapshot.
+- Regra operacional WhatsApp: qualquer `**texto**` que escapar do prompt deve ser normalizado para `*texto*` antes do envio. Correção aplicada em `notification.service.ts`.
+- `processPaymentConfirmation` precisava ser idempotente de verdade: se o pagamento já estiver confirmado mas o booking ainda não, deve retentar `confirmBooking` em vez de encerrar cedo. Correção aplicada em `payment.service.ts`.
+- `confirmBooking` não pode usar um único `try/catch` para todas as notificações. Falha de `sendImage` estava impedindo e-mail e aviso à maquiadora. Correção aplicada: fanout pós-pagamento em blocos independentes com logs por etapa.
+- Erro meu nesta sessão: criei uma suíte nova de `classifyFirstClientMessage` sem mockar `env`/`supabase`, e o Vitest falhou carregando `loadEnv()`. Correção: mock mínimo explícito no arquivo de teste.
+- Descoberta útil para validação paralela: o harness `apps/api/scripts/test-sophia-e2e.mts` não podia ficar preso à porta fixa `4999`, senão os subagentes colidiriam ao rodar cenários em paralelo. Correção aplicada: suporte a `--port` / `SOPHIA_E2E_MOCK_PORT`.
+- Descoberta útil do harness: limpar apenas por `phone` não é suficiente quando `save_client_data` reaproveita cliente por CPF/e-mail e relinka a conversa. O teardown também precisa apagar conversas referenciadas por `clientId`, senão a exclusão da cliente quebra por FK em `conversations_client_id_fkey`.
+- Achado residual pós-validação: no cenário `booking-maquiagem`, o fluxo pode exibir um bloco de confirmação antes da aprovação da cliente e depois repetir o bloco canônico da tool ao receber a aprovação. O cenário passou, mas existe redundância de UX a monitorar em novos rounds.

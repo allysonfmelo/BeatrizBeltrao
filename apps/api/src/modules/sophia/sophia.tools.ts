@@ -133,6 +133,7 @@ interface ToolExecutionContext {
   collectedData: Record<string, unknown>;
   firstMessageCategory: FirstMessageCategory;
   websiteLinkAlreadySent: boolean;
+  latestClientMessage?: string;
   /**
    * Set to true by `executeHandoff` after it (a) flips the conversation
    * to handoff state and (b) sends the transfer-confirmation message to
@@ -141,6 +142,19 @@ interface ToolExecutionContext {
    * LLM doesn't get another turn to write a duplicate message.
    */
   handoffJustHappened?: boolean;
+  websiteLinkJustSent?: boolean;
+  bookingConfirmationJustRequested?: boolean;
+}
+
+interface BookingDraft {
+  serviceId: string;
+  serviceName: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  clientName: string;
+  clientCpf: string;
+  clientEmail: string;
+  clientPhone: string;
 }
 
 function hasConfirmedFullName(value: unknown): value is string {
@@ -149,6 +163,68 @@ function hasConfirmedFullName(value: unknown): value is string {
   if (normalized.length < 5) return false;
   const parts = normalized.split(" ").filter(Boolean);
   return parts.length >= 2;
+}
+
+function formatCpf(cpf: string): string {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const match = digits.match(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/);
+  if (!match) return phone;
+  const [, country, area, prefix, suffix] = match;
+  return `+${country} (${area}) ${prefix}-${suffix}`;
+}
+
+function isBookingDraft(value: unknown): value is BookingDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Record<string, unknown>;
+  return [
+    "serviceId",
+    "serviceName",
+    "scheduledDate",
+    "scheduledTime",
+    "clientName",
+    "clientCpf",
+    "clientEmail",
+    "clientPhone",
+  ].every((key) => typeof draft[key] === "string" && draft[key]);
+}
+
+function getBookingDraft(collectedData: Record<string, unknown>): BookingDraft | null {
+  return isBookingDraft(collectedData.bookingDraft) ? collectedData.bookingDraft : null;
+}
+
+function bookingDraftEquals(current: BookingDraft | null, next: BookingDraft): boolean {
+  if (!current) return false;
+  return JSON.stringify(current) === JSON.stringify(next);
+}
+
+function buildBookingConfirmationMessage(draft: BookingDraft): string {
+  const firstName = draft.clientName.trim().split(/\s+/)[0] ?? draft.clientName;
+  return [
+    `Vou confirmar seus dados para dar continuidade ao agendamento, ${firstName} 💕`,
+    "",
+    `Nome completo: ${draft.clientName}`,
+    `CPF: ${formatCpf(draft.clientCpf)}`,
+    `E-mail: ${draft.clientEmail}`,
+    `Telefone: ${formatPhone(draft.clientPhone)}`,
+    `Serviço: ${draft.serviceName}`,
+    `Data e horário: ${draft.scheduledDate} às ${draft.scheduledTime}`,
+    "",
+    "Posso seguir com o pré-agendamento? ✨",
+  ].join("\n");
+}
+
+async function persistCollectedData(
+  ctx: ToolExecutionContext,
+  updates: Record<string, unknown>
+): Promise<void> {
+  await sophiaContext.updateCollectedData(ctx.conversationId, updates);
+  ctx.collectedData = { ...ctx.collectedData, ...updates };
 }
 
 /**
@@ -307,6 +383,11 @@ async function executeSaveClientData(
     if (existingClient) {
       await sophiaContext.linkClient(ctx.conversationId, existingClient.id);
       ctx.clientId = existingClient.id;
+      await persistCollectedData(ctx, {
+        clientName: existingClient.fullName,
+        clientCpf: existingClient.cpf,
+        clientEmail: existingClient.email,
+      });
 
       const cpfMasked = existingClient.cpf
         ? `${existingClient.cpf.slice(0, 3)}.***.***.${existingClient.cpf.slice(-2)}`
@@ -338,20 +419,51 @@ async function executeSaveClientData(
   if (data.cpf) updates.clientCpf = data.cpf.replace(/\D/g, "");
   if (data.email) updates.clientEmail = data.email;
 
-  await sophiaContext.updateCollectedData(ctx.conversationId, updates);
-
   // Merge with existing collected data
   const merged = { ...ctx.collectedData, ...updates };
-  ctx.collectedData = merged;
+  const bookingDraft = getBookingDraft(merged);
+  const persistedUpdates = bookingDraft
+    ? {
+        ...updates,
+        bookingDraft: {
+          ...bookingDraft,
+          clientName: (merged.clientName as string | undefined) ?? bookingDraft.clientName,
+          clientCpf: (merged.clientCpf as string | undefined) ?? bookingDraft.clientCpf,
+          clientEmail: (merged.clientEmail as string | undefined) ?? bookingDraft.clientEmail,
+          clientPhone: ctx.phone,
+        },
+        bookingConfirmationPending: true,
+        bookingConfirmationApproved: false,
+      }
+    : updates;
+
+  await persistCollectedData(ctx, persistedUpdates);
+  const nextCollectedData = { ...merged, ...persistedUpdates };
+  ctx.collectedData = nextCollectedData;
 
   // If we have enough data to find or create a client, link them
-  if (merged.clientName && merged.clientCpf && merged.clientEmail) {
+  if (nextCollectedData.clientName && nextCollectedData.clientCpf && nextCollectedData.clientEmail) {
     try {
       const phone = ctx.phone;
       let client = await clientService.findByPhone(phone);
 
       if (!client) {
-        if (!hasConfirmedFullName(merged.clientName)) {
+        client = await clientService.findByCpfOrEmail(
+          nextCollectedData.clientCpf as string,
+          nextCollectedData.clientEmail as string
+        );
+        if (client && client.phone !== phone) {
+          client = await clientService.update(client.id, {
+            phone,
+            fullName: nextCollectedData.clientName as string,
+            cpf: nextCollectedData.clientCpf as string,
+            email: nextCollectedData.clientEmail as string,
+          });
+        }
+      }
+
+      if (!client) {
+        if (!hasConfirmedFullName(nextCollectedData.clientName)) {
           return JSON.stringify({
             success: true,
             message:
@@ -360,10 +472,10 @@ async function executeSaveClientData(
         }
 
         client = await clientService.create({
-          fullName: merged.clientName as string,
+          fullName: nextCollectedData.clientName as string,
           phone,
-          cpf: merged.clientCpf as string,
-          email: merged.clientEmail as string,
+          cpf: nextCollectedData.clientCpf as string,
+          email: nextCollectedData.clientEmail as string,
         });
       }
 
@@ -388,8 +500,8 @@ async function executeSaveClientData(
   return JSON.stringify({
     success: true,
     message: "Dados salvos",
-    collected: Object.keys(merged).filter(
-      (k) => merged[k] !== undefined && merged[k] !== null
+    collected: Object.keys(nextCollectedData).filter(
+      (k) => nextCollectedData[k] !== undefined && nextCollectedData[k] !== null
     ),
   });
 }
@@ -411,6 +523,49 @@ async function executeCreateBooking(
     return JSON.stringify({
       error: `Serviço com ID '${data.serviceId}' não encontrado. Passe o UUID do serviço, não o nome.`,
       servicos_disponiveis: allServices.map((s) => ({ nome: s.name, id: s.id })),
+    });
+  }
+
+  const client = await clientService.findById(ctx.clientId);
+  if (!client) {
+    return JSON.stringify({ error: "Erro interno: cliente não encontrada" });
+  }
+
+  const bookingDraft: BookingDraft = {
+    serviceId: data.serviceId,
+    serviceName: service.name,
+    scheduledDate: data.scheduledDate,
+    scheduledTime: data.scheduledTime,
+    clientName: client.fullName,
+    clientCpf: client.cpf,
+    clientEmail: client.email,
+    clientPhone: client.phone,
+  };
+  const currentDraft = getBookingDraft(ctx.collectedData);
+  const confirmationApproved = ctx.collectedData.bookingConfirmationApproved === true;
+
+  if (!confirmationApproved || !bookingDraftEquals(currentDraft, bookingDraft)) {
+    await persistCollectedData(ctx, {
+      bookingDraft,
+      bookingConfirmationPending: true,
+      bookingConfirmationApproved: false,
+    });
+
+    const confirmationMessage = buildBookingConfirmationMessage(bookingDraft);
+    await notificationService.sendSophiaMessage(
+      ctx.phone,
+      confirmationMessage,
+      ctx.conversationId
+    );
+    ctx.bookingConfirmationJustRequested = true;
+
+    return JSON.stringify({
+      success: false,
+      confirmationRequired: true,
+      message:
+        "A confirmação final do agendamento foi solicitada à cliente. Aguarde a aprovação explícita antes de criar o pré-agendamento.",
+      confirmationMessage,
+      bookingDraft,
     });
   }
 
@@ -467,11 +622,6 @@ async function executeCreateBooking(
   }
 
   // Create payment charge
-  const client = await clientService.findById(ctx.clientId);
-  if (!client) {
-    return JSON.stringify({ error: "Erro interno: cliente não encontrada" });
-  }
-
   let invoiceUrl = "";
   try {
     invoiceUrl = await paymentService.createPaymentForBooking(
@@ -496,6 +646,11 @@ async function executeCreateBooking(
   }
 
   await sophiaContext.setIntent(ctx.conversationId, "agendamento");
+  await persistCollectedData(ctx, {
+    bookingDraft,
+    bookingConfirmationPending: false,
+    bookingConfirmationApproved: false,
+  });
 
   const depositValue = parseFloat(booking.depositAmount);
   const pixKey = env.PIX_KEY?.trim() || "A definir";
@@ -658,7 +813,7 @@ function shouldBlockWebsiteLink(ctx: ToolExecutionContext): string | null {
     return "O link do site já foi enviado nesta conversa. Não reenvie; continue o atendimento por aqui.";
   }
 
-  if (ctx.firstMessageCategory !== "direct") {
+  if (ctx.firstMessageCategory === "cta_interest" || ctx.firstMessageCategory === "cta_bridal") {
     return "A cliente iniciou a conversa por um CTA do site. Não envie o link novamente nesta conversa.";
   }
 
@@ -693,6 +848,7 @@ async function executeSendWebsiteLink(
     ctx.conversationId
   );
   ctx.websiteLinkAlreadySent = true;
+  ctx.websiteLinkJustSent = true;
 
   return JSON.stringify({
     success: true,

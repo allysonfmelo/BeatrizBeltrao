@@ -21,7 +21,7 @@ const NAME_PATTERN = /^[\p{L}\s]{2,}$/u;
  * and their absence was caught in the first post-fix validation run.
  */
 const CLEAR_INTENT_PATTERN =
-  /\b(servi[cç]os?|maquiagens?|penteados?|ambos|express|sequencial|combo|noivas?|extern[oa]s?|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]ve(?:l|is)|hor[aá]rios?|datas?|valores?|pre[cç]os?|quanto|or[cç]amentos?|pdf|cat[aá]logos?|d[úu]vidas?|informa[cç][aãoõ]e?s?|mais info|saber|sobre\s+(?:os\s+)?servi[cç]os?)\b/i;
+  /\b(servi[cç]os?|maquiagens?|penteados?|ambos|express|sequencial|combo|noivas?|extern[oa]s?|domic[ií]lio|agendar|agenda|disponibilidade|dispon[ií]ve(?:l|is)|hor[aá]rios?|datas?|valores?|pre[cç]os?|quanto|or[cç]amentos?|pdf|cat[aá]logos?|d[úu]vidas?|informa[cç][aãoõ]e?s?|mais info|quero saber mais|me explica|explica melhor|saber|sobre\s+(?:os\s+)?servi[cç]os?)\b/i;
 
 /**
  * Previously this file had a TEST_PHONE_MODEL_MAP that routed different
@@ -98,6 +98,17 @@ function extractNameFromReply(content: string): string | null {
   if (!isValidName(sanitized)) return null;
 
   return sanitized;
+}
+
+function isBookingConfirmationPending(collectedData: Record<string, unknown>): boolean {
+  return collectedData.bookingConfirmationPending === true;
+}
+
+function isAffirmativeConfirmation(content: string): boolean {
+  const normalized = normalizeWhitespace(content).toLowerCase();
+  return /^(sim|s|pode|pode sim|pode seguir|pode prosseguir|confirmo|correto|certo|ok|okay|isso mesmo|perfeito)[!. ]*$/.test(
+    normalized
+  );
 }
 
 /**
@@ -227,19 +238,32 @@ export async function processMessage(
     return;
   }
 
-  // 3. Build system prompt
-  const systemPrompt = buildSystemPrompt({
-    services: ctx.services,
-    serviceReferenceSummary: buildServiceReferenceSummary(),
-    collectedData: ctx.collectedData,
-    conversationStatus: ctx.conversationStatus,
-    clientName: displayFirstName,
-    hasPendingBooking: ctx.hasPendingBooking,
-    phone: ctx.phone,
-    firstClientMessage: ctx.firstClientMessage,
-    firstMessageCategory: ctx.firstMessageCategory,
-    websiteLinkAlreadySent: ctx.websiteLinkAlreadySent,
-  });
+  if (isBookingConfirmationPending(ctx.collectedData) && isAffirmativeConfirmation(normalizedContent)) {
+    const confirmationUpdates = {
+      bookingConfirmationPending: false,
+      bookingConfirmationApproved: true,
+    };
+    await sophiaContext.updateCollectedData(conversation.id, confirmationUpdates);
+    ctx.collectedData = {
+      ...ctx.collectedData,
+      ...confirmationUpdates,
+    };
+  }
+
+  const serviceReferenceSummary = buildServiceReferenceSummary();
+  const buildCurrentSystemPrompt = () =>
+    buildSystemPrompt({
+      services: ctx.services,
+      serviceReferenceSummary,
+      collectedData: ctx.collectedData,
+      conversationStatus: ctx.conversationStatus,
+      clientName: displayFirstName,
+      hasPendingBooking: ctx.hasPendingBooking,
+      phone: ctx.phone,
+      firstClientMessage: ctx.firstClientMessage,
+      firstMessageCategory: ctx.firstMessageCategory,
+      websiteLinkAlreadySent: ctx.websiteLinkAlreadySent,
+    });
 
   // 4. Build message history with the new user message
   const llmMessages: LlmMessage[] = [
@@ -253,6 +277,7 @@ export async function processMessage(
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
+    const systemPrompt = buildCurrentSystemPrompt();
     const response = await sendMessage(systemPrompt, currentMessages, sophiaTools);
 
     // If there are tool calls, execute them and resubmit
@@ -278,7 +303,10 @@ export async function processMessage(
         collectedData: Record<string, unknown>;
         firstMessageCategory: typeof ctx.firstMessageCategory;
         websiteLinkAlreadySent: boolean;
+        latestClientMessage: string;
         handoffJustHappened?: boolean;
+        websiteLinkJustSent?: boolean;
+        bookingConfirmationJustRequested?: boolean;
       } = {
         conversationId: conversation.id,
         phone,
@@ -286,6 +314,7 @@ export async function processMessage(
         collectedData: ctx.collectedData,
         firstMessageCategory: ctx.firstMessageCategory,
         websiteLinkAlreadySent: ctx.websiteLinkAlreadySent,
+        latestClientMessage: normalizedContent,
       };
 
       for (const toolCall of response.toolCalls) {
@@ -295,6 +324,7 @@ export async function processMessage(
         if (toolContext.clientId !== ctx.clientId) {
           ctx.clientId = toolContext.clientId;
         }
+        ctx.collectedData = toolContext.collectedData;
         ctx.websiteLinkAlreadySent = toolContext.websiteLinkAlreadySent;
 
         const toolMsg: LlmMessage = {
@@ -309,10 +339,18 @@ export async function processMessage(
       // confirmation message via executeHandoff. Bail out of the loop now —
       // do NOT call the LLM again, otherwise it might emit a duplicate
       // message ignoring the prompt rule.
-      if (toolContext.handoffJustHappened) {
-        logger.info("Handoff completed inside tool — skipping further LLM iterations", {
+      if (
+        toolContext.handoffJustHappened ||
+        toolContext.websiteLinkJustSent ||
+        toolContext.bookingConfirmationJustRequested
+      ) {
+        logger.info("Tool handled client-facing response — skipping further LLM iterations", {
           conversationId: conversation.id,
           iterations,
+          handoffJustHappened: toolContext.handoffJustHappened ?? false,
+          websiteLinkJustSent: toolContext.websiteLinkJustSent ?? false,
+          bookingConfirmationJustRequested:
+            toolContext.bookingConfirmationJustRequested ?? false,
         });
         return;
       }

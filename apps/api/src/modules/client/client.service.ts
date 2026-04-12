@@ -25,6 +25,16 @@ export async function findById(id: string) {
 }
 
 /**
+ * Finds a client by CPF or email.
+ */
+export async function findByCpfOrEmail(cpf: string, email: string) {
+  const result = await db.query.clients.findFirst({
+    where: or(eq(clients.cpf, cpf), eq(clients.email, email)),
+  });
+  return result ?? null;
+}
+
+/**
  * Creates a new client.
  */
 export async function create(data: CreateClientDTO) {

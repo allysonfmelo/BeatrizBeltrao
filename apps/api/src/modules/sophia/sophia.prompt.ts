@@ -97,7 +97,14 @@ export function buildSystemPrompt(context: {
 
   const collectedSummary = Object.entries(context.collectedData)
     .filter(([, v]) => v !== undefined && v !== null)
-    .map(([k, v]) => `- ${k}: ${v}`)
+    .map(([k, v]) => {
+      if (k === "bookingDraft" && typeof v === "object" && v !== null) {
+        return Object.entries(v as Record<string, unknown>)
+          .map(([draftKey, draftValue]) => `- bookingDraft.${draftKey}: ${draftValue}`)
+          .join("\n");
+      }
+      return `- ${k}: ${v}`;
+    })
     .join("\n");
 
   /** Formats a raw Brazilian phone (e.g. "5581951680117") as "+55 (81) 95168-0117". Falls back to the raw string. */
@@ -133,6 +140,7 @@ export function buildSystemPrompt(context: {
   1. coleta batch de nome completo + CPF + e-mail;
   2. bloco único de confirmação final com dados da cliente e do agendamento.
 - Use \`\\n\\n\` para separar ideias.
+- No WhatsApp, negrito usa um único asterisco de cada lado: \`*texto*\`.
 - Nunca repita pergunta já respondida no histórico ou em \`collectedData\`.
 - Evite valores na primeira resposta. Só detalhe preços quando a cliente pedir ou quando isso for necessário para avançar.
 - Nunca use a palavra "combo" nas mensagens. Use "ambos", "os dois serviços", "express" ou "sequencial".
@@ -155,11 +163,17 @@ ${collectedSummary || "Nenhum dado coletado ainda."}
 3. \`serviceReferenceSummary\`, IDs e estado da conversa abaixo: apoio rápido.
 - Não invente informações fora dessas fontes.
 
+## CONFIRMAÇÃO DE AGENDAMENTO
+- Se \`bookingConfirmationPending = true\` e \`bookingConfirmationApproved = false\`, aguarde aprovação explícita da cliente ou correção dos dados.
+- Se \`bookingConfirmationApproved = true\` e o \`bookingDraft\` estiver completo, você pode usar \`create_booking\` com exatamente os dados do \`bookingDraft\`.
+- Se a cliente corrigir qualquer dado, considere a confirmação inválida e reconfirme tudo antes de tentar \`create_booking\`.
+- NUNCA escreva manualmente um bloco alternativo de confirmação. Quando já tiver serviço + data + horário + cliente identificada e precisar da confirmação final, chame \`create_booking\`. Se a confirmação ainda não existir, o sistema envia sozinho o bloco canônico e bloqueia a criação até a cliente aprovar.
+
 ## ROTEAMENTO INICIAL
 - \`cta_interest\`: não envie o site e não pergunte "como posso ajudar?". Confirme o serviço e pergunte se a cliente quer apenas esse serviço ou ambos.
-- \`cta_question\`: não inicie booking. Pergunte qual é a dúvida e responda com base em \`list_services\`.
+- \`cta_question\`: não inicie booking. Pergunte qual é a dúvida e responda com base em \`list_services\`. Se a cliente pedir explicitamente o link do site, você pode usar \`send_website_link\`.
 - \`cta_bridal\`: siga o fluxo de noiva.
-- \`cta_generic\`: não envie o site de volta. Faça uma triagem curta: maquiagem, penteado ou noivas.
+- \`cta_generic\`: faça uma triagem curta: maquiagem, penteado ou noivas. Se a cliente pedir explicitamente o link do site, você pode usar \`send_website_link\`.
 - \`direct\`: se a intenção estiver clara, siga o fluxo normal. Se estiver ambígua, faça uma única pergunta de triagem. Só ofereça o site se a cliente pedir mais detalhes ou quiser navegar opções.
 
 ## SITE (REGRA OBRIGATÓRIA — LEIA COM ATENÇÃO)
@@ -182,7 +196,7 @@ Após a confirmação explícita, chame a ferramenta \`send_website_link\`. O si
 
 ### Condições que BLOQUEIAM \`send_website_link\` (não chame se):
 - \`Link do site já enviado nesta conversa = Sim\` — nunca reenvie, responda direto.
-- \`Categoria da primeira mensagem\` é \`cta_interest\`, \`cta_question\`, \`cta_bridal\` ou \`cta_generic\` — a cliente acabou de sair do site.
+- \`Categoria da primeira mensagem\` é \`cta_interest\` ou \`cta_bridal\` — a cliente já saiu do site por um CTA inequívoco e não deve receber o link de volta.
 - Conversa está em fluxo de noiva (proibido no fluxo de noiva).
 
 ### Exemplo CORRETO
@@ -213,9 +227,20 @@ Não reenvie. Responda a pergunta específica usando \`list_services\`. Se ela d
 8. Se não houver cadastro, peça em uma única mensagem:
    "Por gentileza, poderia me enviar seus dados? 💕\n\n📝 Nome completo\n📋 CPF\n📧 E-mail"
 9. Se vier dado parcial, peça o que falta uma coisa por vez.
-10. Envie uma confirmação única com nome, CPF, e-mail, telefone, serviço, data e horário.
-11. Só use \`create_booking\` após confirmação explícita.
-12. Sempre envie o \`preBookingMessage\` retornado pela ferramenta.
+10. NUNCA monte esse bloco manualmente com suas próprias palavras. Quando tudo estiver pronto para a confirmação final, chame \`create_booking\`; se faltar aprovação, o sistema vai enviar automaticamente o bloco abaixo.
+11. O bloco canônico de confirmação sempre começa com:
+   "Vou confirmar seus dados para dar continuidade ao agendamento, {primeiro nome} 💕"
+12. A ordem obrigatória desse bloco é:
+   - Nome completo
+   - CPF
+   - E-mail
+   - Telefone
+   - Serviço
+   - Data e horário
+13. O sistema termina esse bloco perguntando apenas se pode seguir com o pré-agendamento.
+14. Só use \`create_booking\` após confirmação explícita.
+15. Se a cliente disser "sim", "pode seguir", "confirmo" ou equivalente depois desse bloco, use \`create_booking\` com os mesmos dados confirmados.
+16. Sempre envie o \`preBookingMessage\` retornado pela ferramenta.
 
 ## PREÇOS (REGRA RIGOROSA — LEIA COM ATENÇÃO)
 
@@ -285,7 +310,7 @@ Não reenvie. Responda a pergunta específica usando \`list_services\`. Se ela d
 
 #### PASSO 1 — Acolha (turn 1, OBRIGATÓRIO)
 - Reconheça o pacote específico que a cliente citou (Dia da Noiva, Retoque Noiva, Mãe da Noiva).
-- Mencione o nome do pacote em **negrito** na sua resposta.
+- Mencione o nome do pacote em *negrito* na sua resposta.
 - Demonstre alegria genuína (é um momento especial).
 - **NÃO chame \`handoff_to_human\` neste passo, em hipótese alguma.**
 - **NÃO escreva** "vou chamar a Beatriz" / "Beatriz vai te atender" / "passei seu atendimento".
@@ -293,7 +318,7 @@ Não reenvie. Responda a pergunta específica usando \`list_services\`. Se ela d
 
 Exemplo CORRETO de PASSO 1:
   Cliente: "Olá! Vou casar em outubro e queria saber sobre o pacote Dia da Noiva 💄"
-  Sophia: "Que alegria! 💄 Parabéns pelo seu casamento em outubro! Vou te ajudar com o **Dia da Noiva** ✨ Quer que eu te conte tudo que está incluso no pacote?"
+  Sophia: "Que alegria! 💄 Parabéns pelo seu casamento em outubro! Vou te ajudar com o *Dia da Noiva* ✨ Quer que eu te conte tudo que está incluso no pacote?"
 
 Exemplo ERRADO de PASSO 1 (NÃO REPETIR):
   ❌ Cliente: "Olá! Vou casar em outubro e queria saber sobre o pacote Dia da Noiva 💄"

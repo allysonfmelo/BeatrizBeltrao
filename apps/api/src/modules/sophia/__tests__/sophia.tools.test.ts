@@ -97,6 +97,7 @@ type TestToolExecutionContext = {
     | "cta_generic"
     | "direct";
   websiteLinkAlreadySent: boolean;
+  latestClientMessage?: string;
 };
 
 const BASE_CTX: TestToolExecutionContext = {
@@ -106,6 +107,7 @@ const BASE_CTX: TestToolExecutionContext = {
   collectedData: {},
   firstMessageCategory: "direct",
   websiteLinkAlreadySent: false,
+  latestClientMessage: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -138,7 +140,9 @@ beforeEach(() => {
   vi.mocked(calendarService.isSlotAvailable).mockResolvedValue(true);
 
   vi.mocked(clientService.findByPhone).mockResolvedValue(null);
+  vi.mocked(clientService.findByCpfOrEmail).mockResolvedValue(null);
   vi.mocked(clientService.create).mockResolvedValue(MOCK_CLIENT as any);
+  vi.mocked(clientService.update).mockResolvedValue(MOCK_CLIENT as any);
   vi.mocked(clientService.findById).mockImplementation(async (id) =>
     id === "cli-1" ? (MOCK_CLIENT as any) : null
   );
@@ -159,6 +163,7 @@ beforeEach(() => {
 
   vi.mocked(notificationService.notifyMaquiadora).mockResolvedValue(undefined);
   vi.mocked(notificationService.sendWhatsAppMessage).mockResolvedValue("msg-1");
+  vi.mocked(notificationService.sendSophiaMessage).mockResolvedValue(["msg-1"] as any);
 
   vi.mocked(serviceReferenceService.getServiceReference).mockReturnValue({
     version: "2026.03.24",
@@ -419,6 +424,32 @@ describe("executeTool — save_client_data", () => {
     expect(clientService.create).not.toHaveBeenCalled();
     expect(sophiaContext.linkClient).toHaveBeenCalledWith("conv-1", "cli-1");
   });
+
+  it("reaproveita cliente existente por CPF ou email e atualiza o telefone da conversa", async () => {
+    vi.mocked(clientService.findByCpfOrEmail).mockResolvedValue({
+      ...MOCK_CLIENT,
+      phone: "5511888887777",
+    } as any);
+
+    const ctx = makeCtx({
+      collectedData: { clientName: "Maria Souza", clientCpf: "12345678901" },
+    });
+
+    await executeTool(
+      makeToolCall("save_client_data", { email: "maria@test.com" }),
+      ctx
+    );
+
+    expect(clientService.findByCpfOrEmail).toHaveBeenCalledWith("12345678901", "maria@test.com");
+    expect(clientService.update).toHaveBeenCalledWith("cli-1", {
+      phone: "5511999990000",
+      fullName: "Maria Souza",
+      cpf: "12345678901",
+      email: "maria@test.com",
+    });
+    expect(clientService.create).not.toHaveBeenCalled();
+    expect(sophiaContext.linkClient).toHaveBeenCalledWith("conv-1", "cli-1");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -427,7 +458,23 @@ describe("executeTool — save_client_data", () => {
 
 describe("executeTool — create_booking", () => {
   it("cria pre-agendamento e retorna link de pagamento", async () => {
-    const ctx = makeCtx({ clientId: "cli-1" });
+    const ctx = makeCtx({
+      clientId: "cli-1",
+      collectedData: {
+        bookingDraft: {
+          serviceId: "svc-1",
+          serviceName: "Maquiagem Social",
+          scheduledDate: "2026-04-01",
+          scheduledTime: "09:00",
+          clientName: "Maria Souza",
+          clientCpf: "12345678901",
+          clientEmail: "maria@test.com",
+          clientPhone: "5511999990000",
+        },
+        bookingConfirmationApproved: true,
+        bookingConfirmationPending: false,
+      },
+    });
 
     const result = await executeTool(
       makeToolCall("create_booking", {
@@ -455,11 +502,39 @@ describe("executeTool — create_booking", () => {
     expect(parsed.deposit).toBe("R$ 75.00");
     expect(parsed.deadline).toBe("24 horas");
     expect(parsed.preBookingMessage).toContain("✨ PRÉ-AGENDAMENTO");
-    expect(parsed.preBookingMessage).toContain("Chave PIX: 81999999999");
+    expect(parsed.preBookingMessage).toContain("💳 LINK DE PAGAMENTO (SINAL 30%)");
+    expect(parsed.preBookingMessage).toContain("https://asaas.com/invoice/123");
     expect(parsed.pix).toEqual({
       key: "81999999999",
       holderName: "Deborah Nicolly",
     });
+  });
+
+  it("solicita confirmação final antes de criar o pré-agendamento quando ela ainda não existe", async () => {
+    const ctx = makeCtx({ clientId: "cli-1" });
+
+    const result = await executeTool(
+      makeToolCall("create_booking", {
+        service_id: "svc-1",
+        scheduled_date: "2026-04-01",
+        scheduled_time: "09:00",
+      }),
+      ctx
+    );
+    const parsed = JSON.parse(result);
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.confirmationRequired).toBe(true);
+    expect(parsed.confirmationMessage).toContain("Vou confirmar seus dados");
+    expect(parsed.confirmationMessage).toContain("Nome completo: Maria Souza");
+    expect(parsed.confirmationMessage).toContain("CPF: 123.456.789-01");
+    expect(parsed.confirmationMessage).toContain("Telefone: +55 (11) 99999-0000");
+    expect(notificationService.sendSophiaMessage).toHaveBeenCalledWith(
+      "5511999990000",
+      expect.stringContaining("Vou confirmar seus dados"),
+      "conv-1"
+    );
+    expect(bookingService.createPreBooking).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando cliente nao esta vinculada", async () => {
@@ -480,7 +555,23 @@ describe("executeTool — create_booking", () => {
   it("retorna erro quando horario nao esta disponivel", async () => {
     vi.mocked(calendarService.isSlotAvailable).mockResolvedValue(false);
 
-    const ctx = makeCtx({ clientId: "cli-1" });
+    const ctx = makeCtx({
+      clientId: "cli-1",
+      collectedData: {
+        bookingDraft: {
+          serviceId: "svc-1",
+          serviceName: "Maquiagem Social",
+          scheduledDate: "2026-04-01",
+          scheduledTime: "09:00",
+          clientName: "Maria Souza",
+          clientCpf: "12345678901",
+          clientEmail: "maria@test.com",
+          clientPhone: "5511999990000",
+        },
+        bookingConfirmationApproved: true,
+        bookingConfirmationPending: false,
+      },
+    });
     const result = await executeTool(
       makeToolCall("create_booking", {
         service_id: "svc-1",
@@ -501,7 +592,23 @@ describe("executeTool — create_booking", () => {
       new Error("ASAAS indisponivel")
     );
 
-    const ctx = makeCtx({ clientId: "cli-1" });
+    const ctx = makeCtx({
+      clientId: "cli-1",
+      collectedData: {
+        bookingDraft: {
+          serviceId: "svc-1",
+          serviceName: "Maquiagem Social",
+          scheduledDate: "2026-04-01",
+          scheduledTime: "09:00",
+          clientName: "Maria Souza",
+          clientCpf: "12345678901",
+          clientEmail: "maria@test.com",
+          clientPhone: "5511999990000",
+        },
+        bookingConfirmationApproved: true,
+        bookingConfirmationPending: false,
+      },
+    });
     const result = await executeTool(
       makeToolCall("create_booking", {
         service_id: "svc-1",
@@ -586,6 +693,11 @@ describe("executeTool — handoff_to_human", () => {
       "conv-1",
       "Noiva — evento externo"
     );
+    expect(notificationService.sendSophiaMessage).toHaveBeenCalledWith(
+      "5511999990000",
+      expect.stringContaining("Já passei seu atendimento para a Beatriz"),
+      "conv-1"
+    );
     expect(notificationService.notifyMaquiadora).toHaveBeenCalledWith(
       "Transferência de Conversa",
       expect.stringContaining("5511999990000")
@@ -644,6 +756,21 @@ describe("executeTool — send_website_link", () => {
     expect(parsed.success).toBe(false);
     expect(parsed.skipped).toBe(true);
     expect(parsed.message).toMatch(/CTA do site/i);
+  });
+
+  it("permite envio quando a conversa foi classificada como cta_generic", async () => {
+    const result = await executeTool(
+      makeToolCall("send_website_link"),
+      makeCtx({ firstMessageCategory: "cta_generic" })
+    );
+    const parsed = JSON.parse(result);
+
+    expect(notificationService.sendWhatsAppMessage).toHaveBeenCalledWith(
+      "5511999990000",
+      expect.stringContaining("https://biabeltrao.com.br"),
+      "conv-1"
+    );
+    expect(parsed.success).toBe(true);
   });
 });
 
