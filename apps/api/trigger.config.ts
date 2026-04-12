@@ -96,7 +96,11 @@ export default defineConfig({
       // Include assets (service-reference.yaml + PDF catalogs)
       // and Google Service Account credentials needed by calendar integration
       additionalFiles({
-        files: ["../../assets/**", "../../credentials/**"],
+        files: [
+          "../../assets/**",
+          "../../credentials/**",
+          "./src/modules/sophia/*.md",
+        ],
       }),
     ],
   },
