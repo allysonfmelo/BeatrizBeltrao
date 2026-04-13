@@ -23,3 +23,22 @@ export function formatBRL(cents: number): string {
 export function calculateDeposit(totalPrice: number, percentage = 30): number {
   return Math.round((totalPrice * percentage) / 100);
 }
+
+/**
+ * Formats a Brazilian phone number for display: 5581999998888 -> "+55 (81) 99999-8888"
+ */
+export function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const match = digits.match(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/);
+  if (!match) return phone;
+  const [, country, area, prefix, suffix] = match;
+  return `+${country} (${area}) ${prefix}-${suffix}`;
+}
+
+/**
+ * Returns the first token of a full name (collapses inner whitespace).
+ */
+export function extractFirstName(fullName: string): string {
+  const normalized = fullName.trim().replace(/\s+/g, " ");
+  return normalized.split(" ")[0] ?? normalized;
+}

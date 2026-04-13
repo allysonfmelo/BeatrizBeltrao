@@ -140,7 +140,12 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
     .where(eq(bookings.id, bookingId))
     .returning();
 
-  logger.info("Booking confirmed", { bookingId, eventId, paymentMethod });
+  logger.info("Booking confirmed", {
+    stage: "booking_confirmed",
+    bookingId,
+    eventId,
+    paymentMethod,
+  });
 
   const paymentMethodLabel = paymentMethod
     ? {
@@ -160,7 +165,6 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
       depositAmount: booking.depositAmount,
       paymentMethod: paymentMethodLabel,
     });
-    logger.info("Booking confirmation WhatsApp media sent", { bookingId, phone: client.phone });
   } catch (error) {
     logger.error("Failed to send booking confirmation WhatsApp media", {
       bookingId,
@@ -177,7 +181,6 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
       totalPrice: parseFloat(booking.totalPrice) * 100,
       depositAmount: parseFloat(booking.depositAmount) * 100,
     });
-    logger.info("Booking confirmation email sent after payment", { bookingId, email: client.email });
   } catch (error) {
     logger.error("Failed to send booking confirmation email", {
       bookingId,
@@ -190,7 +193,6 @@ export async function confirmBooking(bookingId: string, paymentMethod?: string) 
       "Novo Agendamento Confirmado",
       `Cliente: ${client.fullName}\nTelefone: ${client.phone}\nServiço: ${service.name}\nData: ${booking.scheduledDate}\nHorário: ${booking.scheduledTime}`
     );
-    logger.info("Maquiadora notified after booking confirmation", { bookingId });
   } catch (error) {
     logger.error("Failed to notify maquiadora about confirmed booking", {
       bookingId,
@@ -495,6 +497,33 @@ export async function findPendingByClientId(clientId: string) {
       eq(bookings.clientId, clientId),
       eq(bookings.status, "pendente")
     ),
+  });
+  return result ?? null;
+}
+
+/**
+ * Finds a pending booking that matches the exact booking draft fingerprint.
+ * Used to keep create_booking idempotent when the client confirms more than once.
+ */
+export async function findPendingByFingerprint(data: {
+  clientId: string;
+  serviceId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+}) {
+  const timeVariants = data.scheduledTime.length === 5
+    ? [data.scheduledTime, `${data.scheduledTime}:00`]
+    : [data.scheduledTime];
+
+  const result = await db.query.bookings.findFirst({
+    where: and(
+      eq(bookings.clientId, data.clientId),
+      eq(bookings.serviceId, data.serviceId),
+      eq(bookings.scheduledDate, data.scheduledDate),
+      inArray(bookings.scheduledTime, timeVariants),
+      eq(bookings.status, "pendente")
+    ),
+    orderBy: [desc(bookings.createdAt)],
   });
   return result ?? null;
 }

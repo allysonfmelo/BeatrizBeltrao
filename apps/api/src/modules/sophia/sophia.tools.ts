@@ -13,6 +13,7 @@ import {
   getServiceReference,
 } from "../service/service-reference.service.js";
 import { logger } from "../../lib/logger.js";
+import { formatPhone } from "@studio/shared/utils";
 
 /**
  * Tool definitions for Sophia's function calling.
@@ -126,7 +127,7 @@ export const sophiaTools: LlmTool[] = [
 ];
 
 /** Context needed to execute tools */
-interface ToolExecutionContext {
+export interface ToolExecutionContext {
   conversationId: string;
   phone: string;
   clientId: string | null;
@@ -144,6 +145,8 @@ interface ToolExecutionContext {
   handoffJustHappened?: boolean;
   websiteLinkJustSent?: boolean;
   bookingConfirmationJustRequested?: boolean;
+  bookingConfirmationStillPending?: boolean;
+  preBookingMessageJustSent?: boolean;
 }
 
 interface BookingDraft {
@@ -169,14 +172,6 @@ function formatCpf(cpf: string): string {
   const digits = cpf.replace(/\D/g, "");
   if (digits.length !== 11) return cpf;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-}
-
-function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  const match = digits.match(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/);
-  if (!match) return phone;
-  const [, country, area, prefix, suffix] = match;
-  return `+${country} (${area}) ${prefix}-${suffix}`;
 }
 
 function isBookingDraft(value: unknown): value is BookingDraft {
@@ -246,6 +241,204 @@ function computeDraftKey(draft: BookingDraft): string {
     draft.clientCpf.replace(/\D/g, ""),
   ];
   return parts.join("|");
+}
+
+function timeToMinutes(value: string): number | null {
+  const normalized = normalizeTimeForKey(value);
+  const match = normalized.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatHourLabel(value: string): string {
+  const normalized = normalizeTimeForKey(value);
+  const match = normalized.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return value;
+  return match[2] === "00" ? `${Number(match[1])}h` : `${Number(match[1])}h${match[2]}`;
+}
+
+function selectClosestSlotStarts(
+  slotStarts: string[],
+  requestedTime: string,
+  limit = 4
+): string[] {
+  if (slotStarts.length <= limit) return slotStarts;
+
+  const requestedMinutes = timeToMinutes(requestedTime);
+  if (requestedMinutes === null) return slotStarts.slice(0, limit);
+
+  return [...slotStarts]
+    .sort((a, b) => {
+      const aMinutes = timeToMinutes(a);
+      const bMinutes = timeToMinutes(b);
+      const distA = aMinutes === null ? Number.POSITIVE_INFINITY : Math.abs(aMinutes - requestedMinutes);
+      const distB = bMinutes === null ? Number.POSITIVE_INFINITY : Math.abs(bMinutes - requestedMinutes);
+      if (distA !== distB) return distA - distB;
+      return (aMinutes ?? 0) - (bMinutes ?? 0);
+    })
+    .slice(0, limit);
+}
+
+interface PreBookingMessageInput {
+  service: { type: string; name: string };
+  booking: {
+    depositAmount: string;
+    totalPrice: string;
+    scheduledDate: string;
+    scheduledTime: string;
+  };
+  client: {
+    fullName: string;
+  };
+  invoiceUrl: string;
+}
+
+function buildPreBookingMessage({
+  service,
+  booking,
+  client,
+  invoiceUrl,
+}: PreBookingMessageInput): string {
+  const scheduledTimeDisplay = normalizeTimeForKey(booking.scheduledTime);
+  const depositValue = parseFloat(booking.depositAmount);
+  const pixKey = env.PIX_KEY?.trim() || "A definir";
+  const pixHolder = env.PIX_HOLDER_NAME?.trim() || "A definir";
+  const clientName = client.fullName;
+
+  // For "Ambos" services (type = combo), present the components (Maquiagem/Penteado)
+  // individually — never a summed total — per the business rule.
+  const isAmbosService = service.type === "combo";
+  const componentLines = isAmbosService
+    ? [
+        "",
+        "SERVIÇOS INCLUSOS",
+        "💄 Maquiagem Social — R$ 240,00",
+        "💇‍♀️ Penteado Social — R$ 190,00",
+      ]
+    : [];
+  const dayPaymentBlock = isAmbosService
+    ? [
+        "💰 A pagar no dia do serviço:",
+        "   • Maquiagem: R$ 168,00",
+        "   • Penteado: R$ 133,00",
+      ]
+    : [
+        `💰 Pagamento no dia: R$ ${(parseFloat(booking.totalPrice) - depositValue).toFixed(2)}`,
+      ];
+
+  const paymentLinkBlock = invoiceUrl
+    ? [
+        "",
+        "💳 LINK DE PAGAMENTO (SINAL 30%)",
+        `🔗 ${invoiceUrl}`,
+        "",
+        "Clique no link acima para pagar via Pix, cartão ou boleto de forma rápida e segura.",
+      ]
+    : [
+        "",
+        "⚠️ Tivemos uma instabilidade temporária gerando o link de pagamento.",
+        "Você pode pagar via Pix usando a chave abaixo, ou me avisar que eu gero o link de novo:",
+        `Chave PIX: ${pixKey}`,
+        `Titular: ${pixHolder}`,
+      ];
+
+  return [
+    "✨ PRÉ-AGENDAMENTO",
+    "",
+    "DADOS DA CLIENTE",
+    `NOME: ${clientName}`,
+    `DATA: ${booking.scheduledDate}`,
+    `HORÁRIO: ${scheduledTimeDisplay}`,
+    ...componentLines,
+    "",
+    "PAGAMENTO",
+    `💳 Sinal (30%): R$ ${depositValue.toFixed(2)}`,
+    ...dayPaymentBlock,
+    ...paymentLinkBlock,
+    "",
+    "⏳ O pagamento deve ser realizado em até 24h para reserva da data.",
+    "Após a confirmação do pagamento, você recebe as informações completas de local e cuidados prévios. 🤍",
+  ].join("\n");
+}
+
+/**
+ * Returns the ASAAS invoice URL for an existing pending booking, creating
+ * one if missing. Falls back to "" if ASAAS is unavailable so the caller
+ * can render the PIX-only block from buildPreBookingMessage.
+ */
+async function ensureInvoiceUrl(
+  booking: { id: string; depositAmount: string; scheduledDate: string },
+  serviceName: string,
+  client: { fullName: string; cpf: string; email: string; phone: string }
+): Promise<string> {
+  const existingPayment = await paymentService.findByBookingId(booking.id);
+  if (existingPayment?.asaasInvoiceUrl) return existingPayment.asaasInvoiceUrl;
+
+  try {
+    return await paymentService.createPaymentForBooking(
+      { id: booking.id, depositAmount: booking.depositAmount, scheduledDate: booking.scheduledDate, serviceName },
+      client
+    );
+  } catch (error) {
+    logger.error("Failed to create payment for booking", {
+      bookingId: booking.id,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+    return "";
+  }
+}
+
+/**
+ * Persists the booking-success state, sends the canonical pre-booking
+ * message to the client (with the ASAAS link), and returns the JSON payload
+ * the agent loop sends back to the LLM. Used in both the idempotent reuse
+ * path and the fresh booking path so they stay in sync.
+ */
+async function emitPreBooking(
+  ctx: ToolExecutionContext,
+  service: { name: string; type: string },
+  client: { fullName: string },
+  booking: { id: string; totalPrice: string; depositAmount: string; scheduledDate: string; scheduledTime: string },
+  invoiceUrl: string,
+  bookingDraft: BookingDraft,
+  draftKey: string
+) {
+  await sophiaContext.setIntent(ctx.conversationId, "agendamento");
+  await persistCollectedData(ctx, {
+    bookingDraft,
+    bookingDraftKey: draftKey,
+    bookingConfirmationAskedForDraftKey: null,
+    bookingConfirmationApprovedForDraftKey: null,
+    preBookingMessageSentForDraftKey: draftKey,
+  });
+
+  const preBookingMessage = buildPreBookingMessage({
+    service,
+    booking,
+    client,
+    invoiceUrl,
+  });
+
+  await notificationService.sendSophiaMessage(ctx.phone, preBookingMessage, ctx.conversationId);
+  ctx.preBookingMessageJustSent = true;
+
+  return {
+    success: true,
+    bookingId: booking.id,
+    service: service.name,
+    date: booking.scheduledDate,
+    time: normalizeTimeForKey(booking.scheduledTime),
+    totalPrice: `R$ ${parseFloat(booking.totalPrice).toFixed(2)}`,
+    deposit: `R$ ${parseFloat(booking.depositAmount).toFixed(2)}`,
+    invoiceUrl,
+    deadline: "24 horas",
+    preBookingMessage,
+    alreadySentBySystem: true,
+    pix: {
+      key: env.PIX_KEY?.trim() || "A definir",
+      holderName: env.PIX_HOLDER_NAME?.trim() || "A definir",
+    },
+  };
 }
 
 /**
@@ -349,10 +542,13 @@ async function executeListServices(): Promise<string> {
   const dbServices = await serviceService.listActive();
 
   const formattedReference = referenceServices.map((item) => {
+    const isAmbos = item.type === "combo";
     const price =
-      item.pricing.policy === "fixed" && typeof item.pricing.amount_brl === "number"
-        ? `R$ ${item.pricing.amount_brl.toFixed(2)}`
-        : "sob consulta";
+      isAmbos
+        ? "Maquiagem: R$ 240,00 + Penteado: R$ 190,00"
+        : item.pricing.policy === "fixed" && typeof item.pricing.amount_brl === "number"
+          ? `R$ ${item.pricing.amount_brl.toFixed(2)}`
+          : "sob consulta";
 
     return {
       key: item.key,
@@ -369,7 +565,13 @@ async function executeListServices(): Promise<string> {
           ? `R$ ${((item.pricing.amount_brl * reference.policies.deposit_percentage) / 100).toFixed(2)}`
           : "sob consulta",
       pricingPolicy: item.pricing.policy,
-      amountBrl: item.pricing.amount_brl ?? null,
+      amountBrl: isAmbos ? null : item.pricing.amount_brl ?? null,
+      pricingBreakdown: isAmbos
+        ? {
+            maquiagemBrl: 240,
+            penteadoBrl: 190,
+          }
+        : null,
       duration:
         typeof item.duration_minutes === "number"
           ? `${item.duration_minutes} min`
@@ -427,12 +629,15 @@ async function executeCheckAvailability(
   }
 
   const slots = await calendarService.getAvailableSlots(date, service.durationMinutes);
+  const limitedSlots = slots.slice(0, 4);
   return JSON.stringify({
     available: slots.length > 0,
     date,
     service: service.name,
     duration: service.durationMinutes,
-    slots: slots.map((s) => `${s.start} - ${s.end}`),
+    slots: limitedSlots.map((s) => `${s.start} - ${s.end}`),
+    totalSlots: slots.length,
+    slotsLimited: slots.length > limitedSlots.length,
   });
 }
 
@@ -600,17 +805,41 @@ async function executeCreateBooking(
     return JSON.stringify({ error: "Erro interno: cliente não encontrada" });
   }
 
+  const normalizedScheduledTime = normalizeTimeForKey(data.scheduledTime);
   const bookingDraft: BookingDraft = {
     serviceId: data.serviceId,
     serviceName: service.name,
     scheduledDate: data.scheduledDate,
-    scheduledTime: data.scheduledTime,
+    scheduledTime: normalizedScheduledTime,
     clientName: client.fullName,
     clientCpf: client.cpf,
     clientEmail: client.email,
     clientPhone: client.phone,
   };
   const draftKey = computeDraftKey(bookingDraft);
+
+  // Idempotency guard: if this exact draft already exists as pending, reuse
+  // its payment link instead of recreating booking + ASAAS invoice.
+  const existingPendingForDraft = await bookingService.findPendingByFingerprint({
+    clientId: ctx.clientId,
+    serviceId: data.serviceId,
+    scheduledDate: data.scheduledDate,
+    scheduledTime: normalizedScheduledTime,
+  });
+  if (existingPendingForDraft) {
+    const invoiceUrl = await ensureInvoiceUrl(existingPendingForDraft, service.name, client);
+    const payload = await emitPreBooking(
+      ctx,
+      service,
+      client,
+      existingPendingForDraft,
+      invoiceUrl,
+      bookingDraft,
+      draftKey
+    );
+    return JSON.stringify({ ...payload, idempotentReuse: true });
+  }
+
   const flags = getConfirmationFlags(ctx.collectedData);
   const alreadyApprovedForThisDraft = flags.approvedForKey === draftKey;
   const alreadyAskedForThisDraft = flags.askedForKey === draftKey;
@@ -634,6 +863,7 @@ async function executeCreateBooking(
       bookingDraft,
       bookingDraftKey: draftKey,
     });
+    ctx.bookingConfirmationStillPending = true;
     return JSON.stringify({
       success: false,
       confirmationStillPending: true,
@@ -652,10 +882,6 @@ async function executeCreateBooking(
       bookingConfirmationAskedForDraftKey: draftKey,
       // Clear any stale approval for a previous draftKey.
       bookingConfirmationApprovedForDraftKey: null,
-      // Legacy flags (kept for backward-compat with any surviving
-      // consumers, but the draftKey flags above are authoritative).
-      bookingConfirmationPending: true,
-      bookingConfirmationApproved: false,
     });
 
     const confirmationMessage = buildBookingConfirmationMessage(bookingDraft);
@@ -677,7 +903,7 @@ async function executeCreateBooking(
 
   const available = await calendarService.isSlotAvailable(
     data.scheduledDate,
-    data.scheduledTime,
+    normalizedScheduledTime,
     service.durationMinutes
   );
 
@@ -686,11 +912,17 @@ async function executeCreateBooking(
       data.scheduledDate,
       service.durationMinutes
     );
+    const closestSlots = selectClosestSlotStarts(
+      alternativeSlots.map((s) => s.start),
+      normalizedScheduledTime,
+      4
+    );
 
     return JSON.stringify({
-      error: `O horário ${data.scheduledTime} não está disponível no dia ${data.scheduledDate}.`,
+      error: `O horário ${normalizedScheduledTime} não está disponível no dia ${data.scheduledDate}.`,
       suggestion: "Apresente os horários disponíveis abaixo à cliente e pergunte qual prefere.",
-      available_slots: alternativeSlots.map((s) => s.start),
+      available_slots: closestSlots,
+      available_slots_human: closestSlots.map((slot) => formatHourLabel(slot)),
       no_slots_message:
         alternativeSlots.length === 0
           ? "Nenhum horário disponível neste dia. Sugira outra data à cliente."
@@ -705,7 +937,7 @@ async function executeCreateBooking(
       clientId: ctx.clientId,
       serviceId: data.serviceId,
       scheduledDate: data.scheduledDate,
-      scheduledTime: data.scheduledTime,
+      scheduledTime: normalizedScheduledTime,
     });
   } catch (bookingError) {
     const errorMsg = bookingError instanceof Error ? bookingError.message : "Erro ao criar agendamento";
@@ -715,11 +947,17 @@ async function executeCreateBooking(
       data.scheduledDate,
       service.durationMinutes
     );
+    const closestSlots = selectClosestSlotStarts(
+      alternativeSlots.map((s) => s.start),
+      normalizedScheduledTime,
+      4
+    );
 
     return JSON.stringify({
       error: errorMsg,
       suggestion: "Apresente os horários disponíveis abaixo à cliente e pergunte qual prefere.",
-      available_slots: alternativeSlots.map((s) => s.start),
+      available_slots: closestSlots,
+      available_slots_human: closestSlots.map((slot) => formatHourLabel(slot)),
       no_slots_message:
         alternativeSlots.length === 0
           ? "Nenhum horário disponível neste dia. Sugira outra data à cliente."
@@ -751,96 +989,16 @@ async function executeCreateBooking(
     });
   }
 
-  await sophiaContext.setIntent(ctx.conversationId, "agendamento");
-  await persistCollectedData(ctx, {
-    bookingDraft,
-    bookingConfirmationPending: false,
-    bookingConfirmationApproved: false,
-  });
-
-  const depositValue = parseFloat(booking.depositAmount);
-  const pixKey = env.PIX_KEY?.trim() || "A definir";
-  const pixHolder = env.PIX_HOLDER_NAME?.trim() || "A definir";
-  const clientName = client.fullName;
-
-  // For "Ambos" services (type = combo), present the components (Maquiagem/Penteado)
-  // individually — never a summed total — per the business rule. Per-day payment
-  // is also shown per-component for the same reason.
-  const isAmbosService = service.type === "combo";
-  const componentLines = isAmbosService
-    ? [
-        "",
-        "SERVIÇOS INCLUSOS",
-        "💄 Maquiagem Social — R$ 240,00",
-        "💇‍♀️ Penteado Social — R$ 190,00",
-      ]
-    : [];
-  const dayPaymentBlock = isAmbosService
-    ? [
-        "💰 A pagar no dia do serviço:",
-        "   • Maquiagem: R$ 168,00",
-        "   • Penteado: R$ 133,00",
-      ]
-    : [
-        `💰 Pagamento no dia: R$ ${(parseFloat(booking.totalPrice) - depositValue).toFixed(2)}`,
-      ];
-
-  // Payment block: prefer the ASAAS invoice URL (Pix/cartão/boleto in one
-  // link). If ASAAS errored above (catch on line ~491 swallowed it and left
-  // invoiceUrl empty), fall back to raw PIX instructions + a note that the
-  // link will be retried — keeps the booking alive even on transient ASAAS
-  // sandbox failures instead of silently dropping the payment step, which
-  // was the root cause of the real-test blockage.
-  const paymentLinkBlock = invoiceUrl
-    ? [
-        "",
-        "💳 LINK DE PAGAMENTO (SINAL 30%)",
-        `🔗 ${invoiceUrl}`,
-        "",
-        "Clique no link acima para pagar via Pix, cartão ou boleto de forma rápida e segura.",
-      ]
-    : [
-        "",
-        "⚠️ Tivemos uma instabilidade temporária gerando o link de pagamento.",
-        "Você pode pagar via Pix usando a chave abaixo, ou me avisar que eu gero o link de novo:",
-        `Chave PIX: ${pixKey}`,
-        `Titular: ${pixHolder}`,
-      ];
-
-  const preBookingMessage = [
-    "✨ PRÉ-AGENDAMENTO",
-    "",
-    "DADOS DA CLIENTE",
-    `NOME: ${clientName}`,
-    `DATA: ${data.scheduledDate}`,
-    `HORÁRIO: ${data.scheduledTime}`,
-    ...componentLines,
-    "",
-    "PAGAMENTO",
-    `💳 Sinal (30%): R$ ${depositValue.toFixed(2)}`,
-    ...dayPaymentBlock,
-    ...paymentLinkBlock,
-    "",
-    "⏳ O pagamento deve ser realizado em até 24h para reserva da data.",
-    "Após a confirmação do pagamento, você recebe as informações completas de local e cuidados prévios. 🤍",
-  ].join("\n");
-
-  return JSON.stringify({
-    success: true,
-    bookingId: booking.id,
-    service: service.name,
-    date: data.scheduledDate,
-    time: data.scheduledTime,
-    totalPrice: `R$ ${parseFloat(booking.totalPrice).toFixed(2)}`,
-    deposit: `R$ ${depositValue.toFixed(2)}`,
+  const payload = await emitPreBooking(
+    ctx,
+    service,
+    client,
+    booking,
     invoiceUrl,
-    deadline: "24 horas",
-    preBookingMessage,
-    pix: {
-      key: pixKey,
-      holderName: pixHolder,
-    },
-  });
+    bookingDraft,
+    draftKey
+  );
+  return JSON.stringify(payload);
 }
 
 async function executeCancelBooking(

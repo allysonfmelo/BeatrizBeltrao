@@ -6,6 +6,7 @@ vi.mock("../../../config/supabase.js");
 vi.mock("../../../lib/logger.js");
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
+  stat: vi.fn(),
 }));
 vi.mock("../../service/service-reference.service.js", () => ({
   getPdfCatalogPath: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock("../../../config/env.js", () => ({
 import * as evolutionLib from "../../../lib/evolution.js";
 import * as resendLib from "../../../lib/resend.js";
 import * as supabaseModule from "../../../config/supabase.js";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { getPdfCatalogPath } from "../../service/service-reference.service.js";
 import {
   sendWhatsAppMessage,
@@ -80,6 +81,9 @@ describe("notification.service", () => {
     vi.mocked(evolutionLib.delay).mockResolvedValue(undefined);
     vi.mocked(resendLib.sendEmail).mockResolvedValue(undefined);
     vi.mocked(readFile).mockResolvedValue(Buffer.from("fake-pdf"));
+    vi.mocked(stat).mockResolvedValue({
+      isDirectory: () => true,
+    } as unknown as Awaited<ReturnType<typeof stat>>);
     vi.mocked(getPdfCatalogPath).mockReturnValue("/tmp/catalog.pdf");
 
     const insertChain = mockInsertChain();
@@ -161,6 +165,21 @@ describe("notification.service", () => {
 
     it("normaliza negrito de markdown para o formato do WhatsApp", () => {
       expect(normalizeWhatsAppFormatting("Olá **Ana**")).toBe("Olá *Ana*");
+    });
+
+    it("não divide bloco estruturado com acento em PRÉ-AGENDAMENTO", () => {
+      const content = [
+        "✨ PRÉ-AGENDAMENTO",
+        "",
+        "DADOS DA CLIENTE",
+        `NOME: ${"A".repeat(300)}`,
+        "",
+        "PAGAMENTO",
+        `DETALHES: ${"B".repeat(300)}`,
+      ].join("\n");
+      const chunks = splitSophiaMessage(content);
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toContain("✨ PRÉ-AGENDAMENTO");
     });
   });
 

@@ -131,6 +131,7 @@ export async function handleAsaasWebhook(
   const { event, payment } = parsed.data;
 
   logger.info("ASAAS webhook received", {
+    stage: "webhook_received",
     event,
     paymentId: payment.id,
     status: payment.status,

@@ -133,3 +133,31 @@
 - Descoberta útil para validação paralela: o harness `apps/api/scripts/test-sophia-e2e.mts` não podia ficar preso à porta fixa `4999`, senão os subagentes colidiriam ao rodar cenários em paralelo. Correção aplicada: suporte a `--port` / `SOPHIA_E2E_MOCK_PORT`.
 - Descoberta útil do harness: limpar apenas por `phone` não é suficiente quando `save_client_data` reaproveita cliente por CPF/e-mail e relinka a conversa. O teardown também precisa apagar conversas referenciadas por `clientId`, senão a exclusão da cliente quebra por FK em `conversations_client_id_fkey`.
 - Achado residual pós-validação: no cenário `booking-maquiagem`, o fluxo pode exibir um bloco de confirmação antes da aprovação da cliente e depois repetir o bloco canônico da tool ao receber a aprovação. O cenário passou, mas existe redundância de UX a monitorar em novos rounds.
+
+## Session 2026-04-13 — Fluxo Determinístico + Auditoria Trigger/ASAAS
+
+- Harness E2E atualizado e validado em paralelo com 5 subagentes (cenários isolados); todos os cenários requisitados passaram após evitar colisão de porta (`EADDRINUSE` ao reaproveitar `--port=5101`).
+- Correção de UX anti-loop no `create_booking`: quando já existe pré-agendamento pendente para o mesmo `draftKey`, não reenviar bloco completo; responder com aviso curto de que o link já foi enviado e manter idempotência por draft.
+- Correção de parsing no agendamento direto: `Nome completo:` estava capturando CPF/e-mail no mesmo texto quando a cliente enviava tudo em uma linha. Regex ajustada para cortar o nome no início dos próximos campos (`CPF`, `E-mail`, `Telefone`).
+- Auditoria Google Calendar: integração ativa e operacional; consulta real de slots executada com sucesso em `2026-04-13` para data futura.
+- Auditoria ASAAS sandbox: API acessível (`/payments` OK), porém webhook configurado com `interrupted: true` e `penalizedRequestsCount: 1` no recurso `/webhooks/{id}`; isso explica falhas intermitentes de pós-pagamento real.
+- Correção de pós-pagamento (mídias):
+  - caminho de assets de confirmação estava incorreto em runtime local (`apps/assets/...`); adicionado resolver com múltiplos candidatos para local/prod.
+  - envio de imagem via Evolution exigia base64 bruto; normalização adicionada para converter `data:*;base64,...` em base64 puro antes de `sendMedia`.
+- Validação simulada de webhook (`PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`) confirmou:
+  - transição `payment: pendente -> confirmado`,
+  - `booking: pendente -> confirmado`,
+  - idempotência no segundo evento (`already confirmed, skipping`),
+  - fanout resiliente (falha de mídia não bloqueia e-mail e aviso à maquiadora).
+
+## Session 2026-04-13 — Webhook ASAAS produção corrigido + URL pública real
+- **Domínio fantasma**: `studiobeatrizbeltrao.com.br` NUNCA foi registrado (whois "No match" no Registro.br). Toda a documentação anterior (incluindo `INFRASTRUCTURE.md`) referenciava `api.studiobeatrizbeltrao.com.br` como URL pública — era um placeholder, jamais resolvido. ASAAS recebia NXDOMAIN e marcava webhook como `interrupted`.
+- **URL pública real (atualizada)**: `https://api.biabeltrao.com.br/api/v1/webhook/asaas`. Domínio `biabeltrao.com.br` está no Vercel (NS `vercel-dns.com`), e o subdomínio `api.biabeltrao.com.br` já tem A-record para `5.161.96.49` (VPS Hetzner).
+- **Cert TLS**: Let's Encrypt R13, emitido em 2026-04-13. **Bloqueio anterior**: o router `bb-api` no Traefik tinha regra `Host(api.biabeltrao.com.br) || Host(api.studiobeatrizbeltrao.com.br)`. Lego pedia cert SAN para os DOIS, e o segundo era NXDOMAIN — ACME failhava o order inteiro. Solução: removi o domínio fantasma da label via `docker service update --label-add` + atualizei `docker-compose.prod.yml` para refletir.
+- **Smoke test ponta a ponta validado**:
+  - `GET /api/v1/webhook/asaas` → 404 (só POST registrado, OK).
+  - `POST` sem token → 400 `{"error":"Invalid webhook token"}`.
+  - `POST` com `asaas-access-token: $TOKEN` → 200 `{"status":"processed"}`, log `ASAAS webhook received {event, paymentId, status}`.
+  - Token `ASAAS_WEBHOOK_TOKEN` no container começa com `bb_s…` e termina em `…324` (27 chars).
+- **Próximo passo (manual no painel ASAAS sandbox)**: editar webhook `interrupted` → URL `https://api.biabeltrao.com.br/api/v1/webhook/asaas`, mesmo token, eventos `PAYMENT_CONFIRMED` + `PAYMENT_RECEIVED`, reativar. Depois forçar replay ou cobrança PIX R$0,01 → confirmar booking flui ponta a ponta no WhatsApp.
+- **SSH key correta** para `root@5.161.96.49`: `~/.ssh/bb_deploy_key` (não `id_ed25519_github_actions`, esse retorna `Permission denied`).

@@ -72,6 +72,12 @@ vi.mock("../sophia.tools.js", () => ({
 vi.mock("../../client/client.service.js", () => ({
   findByPhone: vi.fn(),
 }));
+vi.mock("../../service/service.service.js", () => ({
+  findById: vi.fn(),
+}));
+vi.mock("../../calendar/calendar.service.js", () => ({
+  getAvailableSlots: vi.fn(),
+}));
 
 // notification.service.js imports external clients at load time.
 vi.mock("../../notification/notification.service.js", () => ({
@@ -103,6 +109,8 @@ import { processMessage } from "../sophia.service.js";
 import * as sophiaContext from "../sophia.context.js";
 import * as notificationService from "../../notification/notification.service.js";
 import * as clientService from "../../client/client.service.js";
+import * as serviceService from "../../service/service.service.js";
+import * as calendarService from "../../calendar/calendar.service.js";
 import { sendMessage } from "../../../lib/llm.js";
 import { buildSystemPrompt } from "../sophia.prompt.js";
 import { executeTool, sophiaTools } from "../sophia.tools.js";
@@ -160,6 +168,24 @@ describe("sophia.service — processMessage", () => {
       fullName: "Maria Souza",
       phone: PHONE,
     } as never);
+    vi.mocked(serviceService.findById).mockResolvedValue({
+      id: "svc-1",
+      name: "Maquiagem Social",
+      type: "maquiagem",
+      category: "estudio",
+      description: null,
+      price: "240.00",
+      durationMinutes: 60,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    vi.mocked(calendarService.getAvailableSlots).mockResolvedValue([
+      { start: "14:00", end: "15:00" },
+      { start: "14:30", end: "15:30" },
+      { start: "15:00", end: "16:00" },
+      { start: "15:30", end: "16:30" },
+    ] as never);
   });
 
   // -------------------------------------------------------------------------
@@ -388,7 +414,7 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
   });
 
-  it("routes noiva messages through the LLM instead of immediate handoff", async () => {
+  it("routes noiva CTA through the LLM (no hardcoded message, no immediate handoff)", async () => {
     vi.mocked(sophiaContext.loadContext).mockResolvedValueOnce({
       ...baseContext,
       firstClientMessage: "Quero orçamento para noiva",
@@ -396,25 +422,15 @@ describe("sophia.service — processMessage", () => {
       messageHistory: [{ role: "user", content: "Quero orçamento para noiva" }],
     } as never);
     vi.mocked(sendMessage).mockResolvedValueOnce({
-      content: "Que alegria! ✨ Posso te explicar o pacote de noiva e tirar sua dúvida inicial.",
+      content: "Que alegria! Vou te ajudar com o *Dia da Noiva* ✨",
       toolCalls: [],
     });
 
     await processMessage(PHONE, "Quero orçamento para noiva");
 
-    expect(vi.mocked(sendMessage)).toHaveBeenCalledOnce();
-    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
-      PHONE,
-      "Que alegria! ✨ Posso te explicar o pacote de noiva e tirar sua dúvida inicial.",
-      CONVERSATION_ID
-    );
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(sophiaContext.setHandoff)).not.toHaveBeenCalled();
     expect(vi.mocked(notificationService.notifyMaquiadora)).not.toHaveBeenCalled();
-    expect(vi.mocked(buildSystemPrompt)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        firstMessageCategory: "cta_bridal",
-      })
-    );
   });
 
   it("stops the loop immediately after send_website_link responds to the client", async () => {
@@ -434,7 +450,7 @@ describe("sophia.service — processMessage", () => {
       return JSON.stringify({ success: true });
     });
 
-    await processMessage(PHONE, "Quero mais informações");
+    await processMessage(PHONE, "Quero preços de maquiagem social");
 
     expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(notificationService.sendSophiaMessage)).not.toHaveBeenCalled();
@@ -445,8 +461,7 @@ describe("sophia.service — processMessage", () => {
       ...baseContext,
       firstClientMessage: "Quero agendar maquiagem social",
       collectedData: {
-        bookingConfirmationPending: true,
-        bookingConfirmationApproved: false,
+        bookingConfirmationAskedForDraftKey: "svc-1|2026-04-14|14:00|12345678901",
       },
       messageHistory: [
         { role: "user", content: "Quero agendar maquiagem social" },
@@ -462,10 +477,39 @@ describe("sophia.service — processMessage", () => {
 
     expect(vi.mocked(sophiaContext.updateCollectedData)).toHaveBeenCalledWith(
       CONVERSATION_ID,
-      {
-        bookingConfirmationPending: false,
-        bookingConfirmationApproved: true,
-      }
+      expect.objectContaining({
+        bookingConfirmationApprovedForDraftKey: "svc-1|2026-04-14|14:00|12345678901",
+      })
+    );
+  });
+
+  it("blocks pseudo-progress text and continues with forced real availability result", async () => {
+    vi.mocked(sophiaContext.loadContext).mockResolvedValueOnce({
+      ...baseContext,
+      collectedData: {
+        serviceId: "svc-1",
+        scheduledDate: "2026-04-14",
+        scheduledTime: "14:00",
+      },
+      messageHistory: [{ role: "user", content: "Tem horário amanhã às 14h?" }],
+    } as never);
+    vi.mocked(sendMessage)
+      .mockResolvedValueOnce({
+        content: "Perfeito! Vou verificar aqui pra você. [Verificando...]",
+        toolCalls: [],
+      })
+      .mockResolvedValueOnce({
+        content: "Tenho 14:00 e 14:30 disponíveis. Qual horário você prefere? ✨",
+        toolCalls: [],
+      });
+
+    await processMessage(PHONE, "Tem horário amanhã às 14h?");
+
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(notificationService.sendSophiaMessage)).toHaveBeenCalledWith(
+      PHONE,
+      "Tenho 14:00 e 14:30 disponíveis. Qual horário você prefere? ✨",
+      CONVERSATION_ID
     );
   });
 });

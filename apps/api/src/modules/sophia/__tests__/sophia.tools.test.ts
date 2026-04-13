@@ -85,6 +85,8 @@ const MOCK_BOOKING = {
   scheduledTime: "09:00",
 };
 
+const DRAFT_KEY = "svc-1|2026-04-01|09:00|12345678901";
+
 type TestToolExecutionContext = {
   conversationId: string;
   phone: string;
@@ -149,11 +151,13 @@ beforeEach(() => {
 
   vi.mocked(bookingService.createPreBooking).mockResolvedValue(MOCK_BOOKING as any);
   vi.mocked(bookingService.findPendingByClientId).mockResolvedValue(MOCK_BOOKING as any);
+  vi.mocked(bookingService.findPendingByFingerprint).mockResolvedValue(null);
   vi.mocked(bookingService.cancelBooking).mockResolvedValue(undefined as any);
 
   vi.mocked(paymentService.createPaymentForBooking).mockResolvedValue(
     "https://asaas.com/invoice/123"
   );
+  vi.mocked(paymentService.findByBookingId).mockResolvedValue(null as any);
   vi.mocked(paymentService.cancelPaymentForBooking).mockResolvedValue(undefined);
 
   vi.mocked(sophiaContext.updateCollectedData).mockResolvedValue(undefined);
@@ -471,8 +475,9 @@ describe("executeTool — create_booking", () => {
           clientEmail: "maria@test.com",
           clientPhone: "5511999990000",
         },
-        bookingConfirmationApproved: true,
-        bookingConfirmationPending: false,
+        bookingDraftKey: DRAFT_KEY,
+        bookingConfirmationAskedForDraftKey: DRAFT_KEY,
+        bookingConfirmationApprovedForDraftKey: DRAFT_KEY,
       },
     });
 
@@ -504,6 +509,12 @@ describe("executeTool — create_booking", () => {
     expect(parsed.preBookingMessage).toContain("✨ PRÉ-AGENDAMENTO");
     expect(parsed.preBookingMessage).toContain("💳 LINK DE PAGAMENTO (SINAL 30%)");
     expect(parsed.preBookingMessage).toContain("https://asaas.com/invoice/123");
+    expect(parsed.alreadySentBySystem).toBe(true);
+    expect(notificationService.sendSophiaMessage).toHaveBeenCalledWith(
+      "5511999990000",
+      expect.stringContaining("✨ PRÉ-AGENDAMENTO"),
+      "conv-1"
+    );
     expect(parsed.pix).toEqual({
       key: "81999999999",
       holderName: "Deborah Nicolly",
@@ -525,10 +536,6 @@ describe("executeTool — create_booking", () => {
 
     expect(parsed.success).toBe(false);
     expect(parsed.confirmationRequired).toBe(true);
-    expect(parsed.confirmationMessage).toContain("Vou confirmar seus dados");
-    expect(parsed.confirmationMessage).toContain("Nome completo: Maria Souza");
-    expect(parsed.confirmationMessage).toContain("CPF: 123.456.789-01");
-    expect(parsed.confirmationMessage).toContain("Telefone: +55 (11) 99999-0000");
     expect(notificationService.sendSophiaMessage).toHaveBeenCalledWith(
       "5511999990000",
       expect.stringContaining("Vou confirmar seus dados"),
@@ -568,8 +575,9 @@ describe("executeTool — create_booking", () => {
           clientEmail: "maria@test.com",
           clientPhone: "5511999990000",
         },
-        bookingConfirmationApproved: true,
-        bookingConfirmationPending: false,
+        bookingDraftKey: DRAFT_KEY,
+        bookingConfirmationAskedForDraftKey: DRAFT_KEY,
+        bookingConfirmationApprovedForDraftKey: DRAFT_KEY,
       },
     });
     const result = await executeTool(
@@ -605,8 +613,9 @@ describe("executeTool — create_booking", () => {
           clientEmail: "maria@test.com",
           clientPhone: "5511999990000",
         },
-        bookingConfirmationApproved: true,
-        bookingConfirmationPending: false,
+        bookingDraftKey: DRAFT_KEY,
+        bookingConfirmationAskedForDraftKey: DRAFT_KEY,
+        bookingConfirmationApprovedForDraftKey: DRAFT_KEY,
       },
     });
     const result = await executeTool(
@@ -622,6 +631,56 @@ describe("executeTool — create_booking", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.bookingId).toBe("bk-1");
     expect(parsed.invoiceUrl).toBe("");
+    expect(parsed.alreadySentBySystem).toBe(true);
+    expect(notificationService.sendSophiaMessage).toHaveBeenCalledWith(
+      "5511999990000",
+      expect.stringContaining("✨ PRÉ-AGENDAMENTO"),
+      "conv-1"
+    );
+  });
+
+  it("reaproveita pré-agendamento pendente do mesmo draft sem criar novo booking", async () => {
+    vi.mocked(bookingService.findPendingByFingerprint).mockResolvedValue({
+      ...MOCK_BOOKING,
+      scheduledTime: "09:00:00",
+    } as any);
+    vi.mocked(paymentService.findByBookingId).mockResolvedValue({
+      asaasInvoiceUrl: "https://sandbox.asaas.com/i/existing",
+    } as any);
+
+    const ctx = makeCtx({
+      clientId: "cli-1",
+      collectedData: {
+        bookingDraft: {
+          serviceId: "svc-1",
+          serviceName: "Maquiagem Social",
+          scheduledDate: "2026-04-01",
+          scheduledTime: "09:00",
+          clientName: "Maria Souza",
+          clientCpf: "12345678901",
+          clientEmail: "maria@test.com",
+          clientPhone: "5511999990000",
+        },
+        bookingDraftKey: DRAFT_KEY,
+        bookingConfirmationAskedForDraftKey: DRAFT_KEY,
+        bookingConfirmationApprovedForDraftKey: DRAFT_KEY,
+      },
+    });
+
+    const result = await executeTool(
+      makeToolCall("create_booking", {
+        service_id: "svc-1",
+        scheduled_date: "2026-04-01",
+        scheduled_time: "09:00",
+      }),
+      ctx
+    );
+    const parsed = JSON.parse(result);
+
+    expect(bookingService.createPreBooking).not.toHaveBeenCalled();
+    expect(parsed.success).toBe(true);
+    expect(parsed.idempotentReuse).toBe(true);
+    expect(parsed.invoiceUrl).toBe("https://sandbox.asaas.com/i/existing");
   });
 });
 

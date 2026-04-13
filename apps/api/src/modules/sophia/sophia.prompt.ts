@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { formatPhone } from "@studio/shared/utils";
 import type { FirstMessageCategory } from "./sophia.context.js";
 
 interface ServiceRow {
@@ -68,14 +69,6 @@ function addDays(base: Date, days: number): Date {
 
 function isoDate(d: Date): string {
   return d.toISOString().split("T")[0];
-}
-
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  const match = digits.match(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/);
-  if (!match) return raw;
-  const [, country, area, prefix, suffix] = match;
-  return `+${country} (${area}) ${prefix}-${suffix}`;
 }
 
 function buildDateLookupTable(now: Date): string {

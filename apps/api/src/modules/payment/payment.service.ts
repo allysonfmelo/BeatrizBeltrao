@@ -164,6 +164,11 @@ export async function processPaymentConfirmation(
   asaasPaymentId: string,
   billingType?: string
 ): Promise<void> {
+  logger.info("Processing ASAAS payment confirmation", {
+    asaasPaymentId,
+    billingType: billingType ?? null,
+  });
+
   const payment = await findByAsaasId(asaasPaymentId);
   if (!payment) {
     logger.warn("Payment confirmation received for unknown payment", { asaasPaymentId });
@@ -214,7 +219,6 @@ export async function processPaymentConfirmation(
     method,
   });
 
-  // Confirm the booking (creates calendar event + sends notifications)
   if (booking?.status === "confirmado") {
     logger.info("Booking already confirmed while processing payment confirmation", {
       paymentId: payment.id,

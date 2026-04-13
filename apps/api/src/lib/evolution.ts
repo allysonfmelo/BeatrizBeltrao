@@ -22,6 +22,19 @@ interface EvolutionApiOptions {
   body: Record<string, unknown>;
 }
 
+const DATA_URL_RE = /^data:[^;]+;base64,(.+)$/i;
+
+/**
+ * Evolution accepts media as either a public URL or raw base64.
+ * Notification flows often provide a data URL (`data:...;base64,xxx`),
+ * so we normalize to raw base64 before sending.
+ */
+function normalizeMediaInput(media: string): string {
+  const trimmed = media.trim();
+  const match = trimmed.match(DATA_URL_RE);
+  return match ? match[1] : trimmed;
+}
+
 /** Makes a POST request to Evolution API v2 (chat namespace) */
 async function evolutionChatPost({ endpoint, body }: EvolutionApiOptions): Promise<void> {
   const url = `${chatBaseUrl}/${endpoint}/${instance}`;
@@ -102,13 +115,14 @@ export async function sendDocument(
   mimetype: string,
   caption?: string
 ): Promise<string> {
+  const normalizedMedia = normalizeMediaInput(media);
   const result = await evolutionPost({
     endpoint: "sendMedia",
     body: {
       number: phone,
       mediatype: "document",
       mimetype,
-      media,
+      media: normalizedMedia,
       fileName,
       caption: caption ?? "",
     },
@@ -124,13 +138,14 @@ export async function sendImage(
   media: string,
   caption?: string
 ): Promise<string> {
+  const normalizedMedia = normalizeMediaInput(media);
   const result = await evolutionPost({
     endpoint: "sendMedia",
     body: {
       number: phone,
       mediatype: "image",
       mimetype: "image/png",
-      media,
+      media: normalizedMedia,
       fileName: "image.png",
       caption: caption ?? "",
     },

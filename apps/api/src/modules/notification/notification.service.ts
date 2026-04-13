@@ -1,12 +1,12 @@
-import { basename } from "node:path";
-import { readFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
+import { readFile, stat } from "node:fs/promises";
 import { sendTextMessage, sendDocument, sendImage, sendTypingIndicator, calculateTypingDelay, delay } from "../../lib/evolution.js";
 import { sendEmail } from "../../lib/resend.js";
 import { db } from "../../config/supabase.js";
 import { messages } from "@studio/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../config/env.js";
-import { formatBRL } from "@studio/shared/utils";
+import { formatBRL, extractFirstName } from "@studio/shared/utils";
 import { getPdfCatalogPath, type CatalogTopic } from "../service/service-reference.service.js";
 
 /** Messages shorter than this are never split */
@@ -16,7 +16,7 @@ const SOFT_CHUNK_LIMIT = 600;
 /** Maximum number of WhatsApp messages per Sophia response */
 const MAX_CHUNKS = 3;
 /** Patterns that indicate a structured block that must stay together */
-const STRUCTURED_BLOCK_RE = /^(✨\s*(PRE-AGENDAMENTO|AGENDAMENTO)|DADOS DA CLIENTE|PAGAMENTO|Vou confirmar seus dados)/;
+const STRUCTURED_BLOCK_RE = /^(✨\s*(PR[EÉ]-AGENDAMENTO|AGENDAMENTO)|DADOS DA CLIENTE|PAGAMENTO|Vou confirmar seus dados)/i;
 
 /** WhatsApp bold uses single asterisks; collapse markdown-style double asterisks. */
 export function normalizeWhatsAppFormatting(content: string): string {
@@ -344,23 +344,47 @@ interface BookingConfirmationWithImagesData {
   paymentMethod: string;
 }
 
+let cachedAssetsDir: string | null = null;
+
+async function resolveAssetsDir(): Promise<string> {
+  if (cachedAssetsDir) return cachedAssetsDir;
+  const candidates = [
+    resolve(join(import.meta.dirname, "../../../../assets/confirmacao")),
+    resolve(join(import.meta.dirname, "../../../../../assets/confirmacao")),
+    resolve(join(process.cwd(), "assets/confirmacao")),
+    resolve(join(process.cwd(), "../assets/confirmacao")),
+    resolve("/app/assets/confirmacao"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const result = await stat(candidate);
+      if (result.isDirectory()) {
+        cachedAssetsDir = candidate;
+        return candidate;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error(`Confirmation assets directory not found. Tried: ${candidates.join(", ")}`);
+}
+
 /**
  * Sends booking confirmation with branded images + informational text via WhatsApp.
- * Called after ASAAS payment is confirmed.
+ * Called after ASAAS payment is confirmed. Both images are sent in parallel;
+ * any send failure throws so the caller can decide how to react.
  */
 export async function sendBookingConfirmationWithImages(
   phone: string,
   data: BookingConfirmationWithImagesData
 ): Promise<void> {
-  const { resolve, join } = await import("node:path");
+  const assetsDir = await resolveAssetsDir();
 
-  const assetsDir = resolve(join(import.meta.dirname, "../../../../assets/confirmacao"));
+  const [confirmImgBuffer, avisoImgBuffer] = await Promise.all([
+    readFile(join(assetsDir, "agendamento-confirmado.png")),
+    readFile(join(assetsDir, "aviso.png")),
+  ]);
 
-  // 1. Send "Agendamento Confirmado" image with booking details
-  const confirmImgBuffer = await readFile(join(assetsDir, "agendamento-confirmado.png"));
-  const confirmMedia = `data:image/png;base64,${confirmImgBuffer.toString("base64")}`;
-
-  const totalPrice = parseFloat(data.totalPrice).toFixed(2);
   const depositAmount = parseFloat(data.depositAmount).toFixed(2);
   const remainingAmount = (parseFloat(data.totalPrice) - parseFloat(data.depositAmount)).toFixed(2);
 
@@ -379,17 +403,6 @@ export async function sendBookingConfirmationWithImages(
     "⏳ O pagamento do sinal foi confirmado com sucesso!",
     "Sua data está reservada 🤍",
   ].join("\n");
-
-  await sendImage(phone, confirmMedia, confirmCaption);
-  logger.info("Booking confirmation image step sent", {
-    phone,
-    step: "agendamento-confirmado",
-    service: data.serviceName,
-  });
-
-  // 2. Send "Aviso" image with address + care instructions
-  const avisoImgBuffer = await readFile(join(assetsDir, "aviso.png"));
-  const avisoMedia = `data:image/png;base64,${avisoImgBuffer.toString("base64")}`;
 
   const avisoCaption = [
     "📍 *Nosso endereço:*",
@@ -410,15 +423,13 @@ export async function sendBookingConfirmationWithImages(
     "➡️ Não utilizar óleo, apenas protetor térmico",
     "➡️ Cacheadas: cabelos secos e limpos, finalizar apenas com geleia (não utilizar creme)",
     "",
-    `Te espero, com carinho, ${data.clientName.split(" ")[0]}! 🤍`,
+    `Te espero, com carinho, ${extractFirstName(data.clientName)}! 🤍`,
   ].join("\n");
 
-  await sendImage(phone, avisoMedia, avisoCaption);
-  logger.info("Booking confirmation image step sent", {
-    phone,
-    step: "aviso",
-    service: data.serviceName,
-  });
+  await Promise.all([
+    sendImage(phone, `data:image/png;base64,${confirmImgBuffer.toString("base64")}`, confirmCaption),
+    sendImage(phone, `data:image/png;base64,${avisoImgBuffer.toString("base64")}`, avisoCaption),
+  ]);
 
-  logger.info("Booking confirmation images sent", { phone, service: data.serviceName });
+  logger.info("Booking confirmation image flow completed", { phone, service: data.serviceName });
 }
