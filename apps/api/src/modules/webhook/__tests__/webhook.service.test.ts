@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const { TEST_EVAL_TOKEN } = vi.hoisted(() => ({
+  TEST_EVAL_TOKEN: "super-secret-eval-token-abc12345",
+}));
+
 vi.mock("../../../config/env.js", () => ({
   env: {
     ASAAS_WEBHOOK_TOKEN: "test-token",
@@ -9,6 +13,7 @@ vi.mock("../../../config/env.js", () => ({
     EVOLUTION_API_KEY: "test-key",
     EVOLUTION_INSTANCE_NAME: "test",
     RESEND_FROM_EMAIL: "test@studio.com",
+    SOPHIA_EVAL_TOKEN: TEST_EVAL_TOKEN,
   },
 }));
 vi.mock("../../../config/supabase.js");
@@ -109,7 +114,7 @@ describe("webhook.service", () => {
 
       expect(bufferWhatsappMessage.trigger).toHaveBeenCalledOnce();
       expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
-        { phone: "5511999990000", pushName: "Allyson Melo" },
+        { phone: "5511999990000", pushName: "Allyson Melo", modelOverride: undefined },
         { delay: "15s" }
       );
 
@@ -203,6 +208,68 @@ describe("webhook.service", () => {
 
       expect(bufferWhatsappMessage.trigger).not.toHaveBeenCalled();
       expect(redis.rpush).not.toHaveBeenCalled();
+    });
+
+    describe("_test.modelOverride guard (shared-secret gated)", () => {
+      it("propaga modelOverride quando token confere (qualquer telefone)", async () => {
+        const payload = {
+          ...validEvolutionPayload,
+          _test: { token: TEST_EVAL_TOKEN, modelOverride: "openai/gpt-5.4-mini" },
+        };
+
+        await handleEvolutionWebhook(payload);
+
+        expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
+          {
+            phone: "5511999990000",
+            pushName: "Allyson Melo",
+            modelOverride: "openai/gpt-5.4-mini",
+          },
+          { delay: "15s" }
+        );
+      });
+
+      it("IGNORA modelOverride quando token é inválido", async () => {
+        const payload = {
+          ...validEvolutionPayload,
+          _test: { token: "wrong-token-of-same-length-xyz01", modelOverride: "openai/gpt-5.4-mini" },
+        };
+
+        await handleEvolutionWebhook(payload);
+
+        expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
+          expect.objectContaining({ modelOverride: undefined }),
+          { delay: "15s" }
+        );
+      });
+
+      it("IGNORA modelOverride quando _test.token está ausente", async () => {
+        const payload = {
+          ...validEvolutionPayload,
+          _test: { modelOverride: "openai/gpt-5.4-mini" },
+        };
+
+        await handleEvolutionWebhook(payload);
+
+        expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
+          expect.objectContaining({ modelOverride: undefined }),
+          { delay: "15s" }
+        );
+      });
+
+      it("trata modelOverride inválido (não-string, vazio) como undefined mesmo com token válido", async () => {
+        for (const override of [123, null, "", "   ", { nested: "x" }]) {
+          vi.mocked(bufferWhatsappMessage.trigger).mockClear();
+          await handleEvolutionWebhook({
+            ...validEvolutionPayload,
+            _test: { token: TEST_EVAL_TOKEN, modelOverride: override },
+          });
+          expect(bufferWhatsappMessage.trigger).toHaveBeenCalledWith(
+            expect.objectContaining({ modelOverride: undefined }),
+            { delay: "15s" }
+          );
+        }
+      });
     });
 
     it("extrai texto de extendedTextMessage", async () => {

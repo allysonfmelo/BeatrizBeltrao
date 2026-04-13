@@ -1,0 +1,11 @@
+{
+  "scenarioName": "03-edge-unavailable",
+  "pushName": "Eval Edge",
+  "turns": [
+    { "send": "Oi! Quero agendar penteado no domingo 17/05 às 14h.", "waitSeconds": 50, "expectNotIncludes": ["[verificando"] },
+    { "send": "Ah, não sabia! Então pode ser segunda 18/05 às 14h?", "waitSeconds": 55 },
+    { "send": "Ok, então me mostra os horários disponíveis de segunda 18/05.", "waitSeconds": 60 },
+    { "send": "Pode ser 10h então.", "waitSeconds": 60 }
+  ],
+  "expectHandoff": false
+}

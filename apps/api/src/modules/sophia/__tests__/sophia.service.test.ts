@@ -215,7 +215,8 @@ describe("sophia.service — processMessage", () => {
     expect(vi.mocked(sendMessage)).toHaveBeenCalledWith(
       "system prompt",
       expect.any(Array),
-      sophiaTools
+      sophiaTools,
+      { modelOverride: undefined }
     );
 
     // Must dispatch the reply via WhatsApp

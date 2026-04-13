@@ -1,0 +1,32 @@
+{
+  "scenarioName": "smoke-01-direct-makeup",
+  "fakePhone": "5581994599042",
+  "pushName": "Teste Smoke",
+  "modelOverride": "openai/gpt-4o-mini",
+  "turns": [
+    {
+      "send": "Oi! Tudo bem? Tenho interesse em agendar uma maquiagem social.",
+      "waitSeconds": 40,
+      "expectNotIncludes": ["combo", "[verificando", "[aguarde"]
+    },
+    {
+      "send": "Só a maquiagem mesmo, sem penteado.",
+      "waitSeconds": 40
+    },
+    {
+      "send": "Gostaria de agendar para o próximo sábado às 15h, pode ser?",
+      "waitSeconds": 50
+    },
+    {
+      "send": "Perfeito, vamos seguir. Meu nome completo é Maria Eduarda Silva, CPF 123.456.789-09, e-mail maria.teste@example.com.",
+      "waitSeconds": 50,
+      "expectIncludes": ["maria"]
+    },
+    {
+      "send": "Sim, pode confirmar!",
+      "waitSeconds": 60,
+      "expectIncludes": ["sinal", "30%"]
+    }
+  ],
+  "expectHandoff": false
+}

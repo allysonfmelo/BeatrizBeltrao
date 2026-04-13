@@ -47,13 +47,19 @@ export const processWhatsappMessage = task({
   retry: {
     maxAttempts: 2,
   },
-  run: async (payload: { phone: string; combinedText: string; pushName?: string }) => {
-    const { phone, combinedText, pushName } = payload;
+  run: async (payload: {
+    phone: string;
+    combinedText: string;
+    pushName?: string;
+    modelOverride?: string;
+  }) => {
+    const { phone, combinedText, pushName, modelOverride } = payload;
     const lockToken = randomUUID();
 
     logger.info("Processing WhatsApp message via Sophia", {
       phone,
       messageLength: combinedText.length,
+      modelOverride: modelOverride ?? null,
     });
 
     const lockAcquired = await acquirePhoneLock(phone, lockToken);
@@ -63,7 +69,7 @@ export const processWhatsappMessage = task({
     }
 
     try {
-      await sophiaService.processMessage(phone, combinedText, { pushName });
+      await sophiaService.processMessage(phone, combinedText, { pushName, modelOverride });
     } finally {
       await releasePhoneLock(phone, lockToken);
     }

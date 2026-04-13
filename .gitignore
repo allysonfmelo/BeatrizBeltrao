@@ -44,3 +44,6 @@ coverage/
 
 # Logs
 *.log
+
+# Sophia eval transient outputs (keep scenarios + scripts, skip run results)
+scripts/sophia-eval/results/

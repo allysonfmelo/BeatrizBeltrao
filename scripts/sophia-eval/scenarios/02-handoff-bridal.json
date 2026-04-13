@@ -1,0 +1,10 @@
+{
+  "scenarioName": "02-handoff-bridal",
+  "pushName": "Eval Noiva",
+  "turns": [
+    { "send": "Oi! Sou noiva e queria informações sobre maquiagem e penteado para o meu casamento.", "waitSeconds": 50, "expectNotIncludes": ["sinal", "30%", "[verificando"] },
+    { "send": "O casamento é em 20/12, é um evento grande com 200 convidados.", "waitSeconds": 70 }
+  ],
+  "expectHandoff": true,
+  "rejectHandoffReason": "Max tool iterations reached"
+}

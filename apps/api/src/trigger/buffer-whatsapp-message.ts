@@ -13,8 +13,8 @@ export const bufferWhatsappMessage = task({
   retry: {
     maxAttempts: 3,
   },
-  run: async (payload: { phone: string; pushName?: string }) => {
-    const { phone, pushName } = payload;
+  run: async (payload: { phone: string; pushName?: string; modelOverride?: string }) => {
+    const { phone, pushName, modelOverride } = payload;
     const bufferKey = `${BUFFER_PREFIX}${phone}`;
 
     // Fetch all buffered messages (RPUSH preserves chronological order)
@@ -42,6 +42,7 @@ export const bufferWhatsappMessage = task({
       phone,
       combinedText,
       pushName,
+      modelOverride,
     });
 
     return {

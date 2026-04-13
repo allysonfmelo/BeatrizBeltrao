@@ -1,0 +1,13 @@
+{
+  "scenarioName": "01-happy-makeup",
+  "pushName": "Eval Happy",
+  "turns": [
+    { "send": "Oi! Tudo bem? Tenho interesse em agendar uma maquiagem social.", "waitSeconds": 45, "expectNotIncludes": ["combo", "[verificando"] },
+    { "send": "Só a maquiagem mesmo, sem penteado.", "waitSeconds": 45 },
+    { "send": "Dia 15/05 às 10h, pode ser?", "waitSeconds": 55 },
+    { "send": "Meu nome completo é Ana Carolina Ribeiro, CPF 389.521.674-05, e-mail ana.ribeiro.teste@example.com.", "waitSeconds": 55, "expectIncludes": ["ana"] },
+    { "send": "Sim, pode seguir com o pré-agendamento.", "waitSeconds": 70 },
+    { "send": "Sim, pode confirmar.", "waitSeconds": 90, "expectIncludes": ["sinal"] }
+  ],
+  "expectHandoff": false
+}

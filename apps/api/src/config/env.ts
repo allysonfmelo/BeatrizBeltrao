@@ -65,6 +65,13 @@ const envSchema = z.object({
   SENTRY_AUTH_TOKEN: z.string().optional(),
   SENTRY_ORG: z.string().optional(),
   SENTRY_PROJECT: z.string().optional(),
+  /**
+   * Shared secret that gates the `_test.modelOverride` channel on the
+   * Evolution webhook. When unset, the channel is fully disabled (no
+   * request can override the LLM model). Minimum length enforced to
+   * prevent weak tokens. See `webhook.service.ts#extractTestModelOverride`.
+   */
+  SOPHIA_EVAL_TOKEN: z.string().min(24).optional(),
 });
 
 let _env: z.infer<typeof envSchema> | null = null;

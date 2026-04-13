@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import {
   evolutionWebhookSchema,
   extractTextFromWebhook,
@@ -15,6 +16,40 @@ import { env } from "../../config/env.js";
 
 /** Redis key prefix for tracking active buffer run IDs */
 const BUFFER_RUN_PREFIX = "buffer-run:";
+
+/**
+ * Extracts an OpenRouter model override from the webhook payload, gated by a
+ * shared secret (`SOPHIA_EVAL_TOKEN`). The Evolution webhook endpoint is
+ * public — without this guard, anyone with the URL could inject a model
+ * override. When `SOPHIA_EVAL_TOKEN` is unset, the channel is fully disabled.
+ *
+ * Expected payload shape (sent only by the evaluation harness):
+ *   { ..., "_test": { "token": "<SOPHIA_EVAL_TOKEN>", "modelOverride": "<model>" } }
+ *
+ * `crypto.timingSafeEqual` is used to avoid leaking secret length through
+ * timing side channels.
+ */
+function extractTestModelOverride(body: unknown): string | undefined {
+  const expectedToken = env.SOPHIA_EVAL_TOKEN;
+  if (!expectedToken) return undefined;
+  if (typeof body !== "object" || body === null) return undefined;
+
+  const testField = (body as Record<string, unknown>)._test;
+  if (typeof testField !== "object" || testField === null) return undefined;
+
+  const providedToken = (testField as Record<string, unknown>).token;
+  if (typeof providedToken !== "string") return undefined;
+
+  const a = Buffer.from(providedToken, "utf8");
+  const b = Buffer.from(expectedToken, "utf8");
+  if (a.length !== b.length) return undefined;
+  if (!timingSafeEqual(a, b)) return undefined;
+
+  const modelOverride = (testField as Record<string, unknown>).modelOverride;
+  if (typeof modelOverride !== "string") return undefined;
+  const trimmed = modelOverride.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 /**
  * Processes an incoming Evolution API webhook (WhatsApp message).
@@ -90,9 +125,12 @@ export async function handleEvolutionWebhook(body: unknown): Promise<void> {
     }
   }
 
+  // Extract test-only model override (guarded by shared secret).
+  const modelOverride = extractTestModelOverride(body);
+
   // 3. Schedule new buffer task with 15s delay
   const handle = await bufferWhatsappMessage.trigger(
-    { phone, pushName: pushName ?? undefined },
+    { phone, pushName: pushName ?? undefined, modelOverride },
     { delay: "15s" }
   );
 

@@ -44,6 +44,13 @@ const CLEAR_INTENT_PATTERN =
 
 interface ProcessMessageOptions {
   pushName?: string;
+  /**
+   * Explicit OpenRouter model override for this run. Populated only by the
+   * evaluation harness via `_test.modelOverride` on the webhook payload,
+   * and guarded at `webhook.service.ts` by the `5500099` phone prefix.
+   * When omitted, `sendMessage` falls back to `env.OPENROUTER_MODEL`.
+   */
+  modelOverride?: string;
 }
 
 function normalizeWhitespace(value: string): string {
@@ -608,7 +615,9 @@ export async function processMessage(
     iterations++;
 
     const systemPrompt = buildCurrentSystemPrompt();
-    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools);
+    const response = await sendMessage(systemPrompt, currentMessages, sophiaTools, {
+      modelOverride: options.modelOverride,
+    });
 
     // If there are tool calls, execute them and resubmit
     if (response.toolCalls.length > 0) {

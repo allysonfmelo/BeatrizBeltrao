@@ -33,7 +33,11 @@
 import { readFileSync } from "node:fs";
 import postgres from "postgres";
 
-const API_BASE = "https://api.biabeltrao.com.br";
+/**
+ * Target API base URL. Defaults to local dev server for safer iteration.
+ * Override with `SOPHIA_API_BASE=https://api.biabeltrao.com.br` to run against prod.
+ */
+const API_BASE = process.env.SOPHIA_API_BASE ?? "http://localhost:3001";
 const WEBHOOK_PATH = "/api/v1/webhook/evolution";
 const DEFAULT_WAIT_SECONDS = 25; // 15s debounce + ~5s LLM + buffer
 const POLL_INTERVAL_MS = 2000;
@@ -58,6 +62,11 @@ export interface Scenario {
   expectHandoff?: boolean;
   /** If expectHandoff is true, the reason must NOT be this string (default: "Max tool iterations reached") */
   rejectHandoffReason?: string;
+  /**
+   * Per-scenario OpenRouter model override. Sent to the API via `_test.modelOverride`
+   * in the webhook payload. Server-side, only honored when phone starts with `5500099`.
+   */
+  modelOverride?: string;
 }
 
 export interface TurnTranscriptEntry {
@@ -81,7 +90,7 @@ export interface ScenarioResult {
 
 function makeWebhookPayload(scenario: Scenario, text: string): object {
   const id = `test_${scenario.scenarioName}_${Date.now()}`;
-  return {
+  const base: Record<string, unknown> = {
     event: "messages.upsert",
     instance: "test-instance",
     data: {
@@ -98,6 +107,16 @@ function makeWebhookPayload(scenario: Scenario, text: string): object {
       messageTimestamp: Math.floor(Date.now() / 1000),
     },
   };
+  if (scenario.modelOverride) {
+    const token = process.env.SOPHIA_EVAL_TOKEN;
+    if (!token) {
+      throw new Error(
+        "SOPHIA_EVAL_TOKEN env var is required to send modelOverride to the API"
+      );
+    }
+    base._test = { token, modelOverride: scenario.modelOverride };
+  }
+  return base;
 }
 
 async function postWebhook(scenario: Scenario, text: string): Promise<void> {
@@ -322,9 +341,16 @@ async function main(): Promise<void> {
   process.exit(result.pass ? 0 : 1);
 }
 
-// CLI entry — invoked when script is run directly (not imported).
-// Simpler than checking import.meta.url (tsx rewrites paths).
-main().catch((err) => {
-  console.error("✗ Harness crashed:", err);
-  process.exit(2);
-});
+// CLI entry — only run when invoked directly, NOT when imported as a module
+// (the matrix runner at scripts/sophia-eval/run-matrix.ts imports `runScenario`).
+const invokedDirectly = (() => {
+  const arg0 = process.argv[1] ?? "";
+  return arg0.endsWith("sophia-test-client.ts") || arg0.endsWith("sophia-test-client.js");
+})();
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error("✗ Harness crashed:", err);
+    process.exit(2);
+  });
+}
